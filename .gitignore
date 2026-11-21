@@ -221,3 +221,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Ask the Multiverse
+backend/data/
+frontend/node_modules/
+frontend/dist/
+.DS_Store
+!frontend/src/lib/

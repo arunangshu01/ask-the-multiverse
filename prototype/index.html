@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ask the Multiverse - preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #07070a; --line: rgba(255,255,255,.08); --text: #f2f2f4; --muted: #9a9aa6;
+    --red: #e62429; --accent: #e62429; --accent-glow: rgba(230,36,41,.45);
+    --head: "Oswald", "Arial Narrow", Impact, sans-serif; --body: "Inter", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); }
+  body { overflow-x: hidden; }
+  body.lock { overflow: hidden; }
+  html.static *, html.static *::before, html.static *::after { animation: none !important; transition: none !important; }
+  html.static #intro { display: none; }
+  ::-webkit-scrollbar { height: 8px; width: 8px; } ::-webkit-scrollbar-thumb { background: #2a2a33; border-radius: 8px; }
+
+  .grain { position: fixed; inset: -100%; z-index: 140; pointer-events: none; opacity: .07;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation: grain .6s steps(4) infinite; }
+  @keyframes grain { 25% { transform: translate(-3%, 2%); } 50% { transform: translate(2%, -3%); } 75% { transform: translate(-1%, -2%); } }
+  .vignette { position: fixed; inset: 0; z-index: 39; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.65)); }
+
+  /* =====================  OPENING SEQUENCE  ===================== */
+  #intro { position: fixed; inset: 0; z-index: 120; background: #000; overflow: hidden; cursor: default; }
+  #intro.out { animation: introOut 1s ease forwards; }
+  @keyframes introOut { to { opacity: 0; visibility: hidden; } }
+  .letterbox::before, .letterbox::after { content: ""; position: absolute; left: 0; right: 0; height: 9vh; background: #000; z-index: 20; }
+  .letterbox::before { top: 0; } .letterbox::after { bottom: 0; }
+
+  /* act 1: comic pages flipping */
+  .book { position: absolute; inset: 0; perspective: 1600px; perspective-origin: 30% 50%;
+    animation: dolly 3.4s cubic-bezier(.55,0,.25,1) forwards; filter: sepia(.35) saturate(1.4) contrast(1.1); }
+  @keyframes dolly { from { transform: scale(1.5) rotate(-4deg) translateX(6%); } to { transform: scale(1.05) rotate(0) translateX(0); } }
+  .leaf { position: absolute; left: 6%; top: 8%; width: 88%; height: 84%; transform-origin: left center; transform-style: preserve-3d;
+    display: grid; gap: 1.2vw; padding: 1.2vw; background: #f1e6cc; box-shadow: 0 0 60px rgba(0,0,0,.6); backface-visibility: hidden; }
+  .leaf.flip { animation: leaf var(--d, .3s) cubic-bezier(.4,0,.6,1) forwards; }
+  @keyframes leaf { 0% { transform: rotateY(0); } 100% { transform: rotateY(-178deg); filter: brightness(.3); } }
+  .leaf .pn { position: relative; overflow: hidden; border: .35vw solid #111; display: grid; place-items: end start; }
+  .leaf .pn b { font-family: var(--head); font-weight: 700; text-transform: uppercase; color: #fff; font-size: 3.4vw; line-height: .9;
+    padding: .6vw .9vw; text-shadow: .2vw .2vw 0 #000; letter-spacing: -.01em; }
+  .leaf .pn::after { content: ""; position: absolute; inset: 0; background: radial-gradient(rgba(0,0,0,.25) 1px, transparent 1.4px) 0 0 / 6px 6px; mix-blend-mode: multiply; }
+
+  /* act 2: fly-through streaks + montage inside the letters */
+  .streaks { position: absolute; inset: 0; opacity: 0; background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,60,60,.0) 0 3deg, rgba(255,80,80,.35) 3deg 3.6deg, rgba(0,0,0,0) 3.6deg 9deg);
+    mask: radial-gradient(circle, transparent 8%, #000 40%); -webkit-mask: radial-gradient(circle, transparent 8%, #000 40%); }
+  .streaks.on { animation: streak 1.2s ease-out forwards; }
+  @keyframes streak { 0% { opacity: 0; transform: scale(.4) rotate(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(2.4) rotate(25deg); } }
+  .flash { position: absolute; inset: 0; background: #fff; opacity: 0; z-index: 15; pointer-events: none; }
+  .flash.on { animation: flash .5s ease-out forwards; }
+  @keyframes flash { 0% { opacity: .85; } 100% { opacity: 0; } }
+  .redglow { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at 50% 52%, #ff3036 0%, #c3141c 30%, #4a0408 65%, #000 100%); }
+  .redglow.on { animation: glowIn 1.4s ease forwards; }
+  @keyframes glowIn { to { opacity: 1; } }
+  .stage { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); text-align: center; z-index: 10; white-space: nowrap; }
+  .word { position: relative; display: inline-block; font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: -.035em;
+    font-size: clamp(52px, 10.5vw, 168px); line-height: 1; padding: .1em .26em .02em; opacity: 0; }
+  .word .txt { position: relative; z-index: 2; color: transparent; -webkit-background-clip: text; background-clip: text;
+    background-size: cover; background-position: center; transition: color .25s; }
+  .word .slab { position: absolute; inset: 0; z-index: 1; transform: scaleX(0); transform-origin: center;
+    background: linear-gradient(180deg, #ff4146 0%, #e62429 42%, #9b0f16 100%); box-shadow: inset 0 .02em 0 rgba(255,255,255,.4), 0 2vw 6vw rgba(0,0,0,.6); }
+  .word .shine { position: absolute; z-index: 3; top: -20%; bottom: -20%; width: 22%; left: -35%; transform: skewX(-20deg);
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.65), transparent); opacity: 0; }
+  .word.act2 { animation: pullback 2.1s cubic-bezier(.15,.7,.2,1) forwards; }
+  @keyframes pullback { 0% { opacity: 1; transform: scale(5.5); filter: blur(3px); } 60% { filter: blur(0); } 100% { opacity: 1; transform: scale(1); } }
+  .word.act3 .slab { animation: slab .55s cubic-bezier(.7,0,.2,1) forwards; }
+  @keyframes slab { to { transform: scaleX(1); } }
+  .word.act3 .txt { color: #fff; text-shadow: 0 .02em 0 rgba(0,0,0,.25); }
+  .word.act3 .shine { animation: shine 1.1s .45s ease forwards; }
+  @keyframes shine { 0% { opacity: 1; left: -35%; } 100% { opacity: 1; left: 120%; } }
+  .tagline { margin-top: 1.6vw; font-family: var(--head); font-weight: 400; font-size: clamp(12px, 1.5vw, 22px); color: rgba(255,255,255,.9);
+    letter-spacing: 1.4em; padding-left: 1.4em; opacity: 0; }
+  .tagline.on { animation: tag 1.6s cubic-bezier(.2,.8,.2,1) forwards; }
+  @keyframes tag { to { opacity: 1; letter-spacing: .6em; padding-left: .6em; } }
+  .flare { position: absolute; left: 50%; top: 50%; width: 140vw; height: 2px; transform: translate(-50%,-50%) scaleX(0); z-index: 9;
+    background: linear-gradient(90deg, transparent, rgba(255,200,200,.9), #fff, rgba(255,200,200,.9), transparent); filter: blur(1px); box-shadow: 0 0 30px 6px rgba(255,60,60,.6); }
+  .flare.on { animation: flare 1.3s ease-out forwards; }
+  @keyframes flare { 0% { transform: translate(-50%,-50%) scaleX(0); opacity: 1; } 40% { transform: translate(-50%,-50%) scaleX(1); opacity: 1; } 100% { transform: translate(-50%,-50%) scaleX(1.2); opacity: 0; } }
+  .skip { position: absolute; right: 3vw; bottom: calc(9vh + 18px); z-index: 30; font-family: var(--head); letter-spacing: .25em; font-size: 12px;
+    color: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.35); padding: 8px 14px; cursor: pointer; border-radius: 3px; }
+  .skip:hover { color: #fff; border-color: #fff; }
+
+  /* =====================  SITE  ===================== */
+  nav { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 24px; padding: 14px 44px;
+    background: linear-gradient(180deg, rgba(7,7,10,.95), rgba(7,7,10,.6) 70%, transparent); backdrop-filter: blur(6px); }
+  .logo { background: linear-gradient(180deg, #ff3b40, #e62429 50%, #a8121a); font-family: var(--head); font-weight: 700; text-transform: uppercase;
+    font-size: 22px; letter-spacing: -.02em; padding: 4px 10px 2px; line-height: 1; color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.35); cursor: pointer; }
+  .divs { display: flex; gap: 2px; flex-wrap: wrap; }
+  .div { position: relative; font-family: var(--head); font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; cursor: pointer; transition: color .25s; }
+  .div::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 2px; height: 2px; background: var(--accent); transform: scaleX(0);
+    transition: transform .35s cubic-bezier(.2,.8,.2,1); box-shadow: 0 0 12px var(--accent-glow); }
+  .div:hover, .div.on { color: #fff; } .div.on::after { transform: scaleX(1); }
+  .nav-r { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .search { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; width: 280px; transition: border-color .2s; }
+  .search:focus-within { border-color: var(--accent); }
+  .search input { flex: 1; background: none; border: 0; outline: none; color: #fff; font: 13px var(--body); }
+  .ghostbtn { font-family: var(--head); font-size: 11px; letter-spacing: .2em; color: var(--muted); border: 1px solid var(--line); padding: 7px 10px; border-radius: 4px; cursor: pointer; background: none; }
+  .ghostbtn:hover { color: #fff; border-color: #fff; }
+  .sweep { position: fixed; inset: 0; z-index: 35; pointer-events: none; opacity: 0; background: linear-gradient(100deg, transparent 30%, var(--accent-glow) 50%, transparent 70%); background-size: 250% 100%; }
+  .sweep.go { animation: sweep .9s ease forwards; }
+  @keyframes sweep { 0% { opacity: 1; background-position: 120% 0; } 100% { opacity: 0; background-position: -60% 0; } }
+
+  .hero { position: relative; height: 74vh; min-height: 520px; max-height: 820px; margin-top: -72px; overflow: hidden; }
+  .slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s ease; }
+  .slide.on { opacity: 1; }
+  .slide .art { position: absolute; inset: -6%; animation: kenburns 14s ease-in-out infinite alternate; }
+  @keyframes kenburns { to { transform: scale(1.12) translate(-2%, -1%); } }
+  .slide .num { position: absolute; right: 3%; bottom: 6%; font-family: var(--head); font-weight: 700; font-size: 24vw; line-height: .8; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,.14); letter-spacing: -.04em; }
+  .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(7,7,10,.95) 0%, rgba(7,7,10,.6) 38%, transparent 70%), linear-gradient(0deg, var(--bg) 0%, transparent 35%); }
+  .hero-copy { position: absolute; z-index: 2; left: 44px; bottom: 14%; max-width: 640px; }
+  .eyebrow { font-family: var(--head); font-size: 13px; letter-spacing: .35em; color: var(--accent); text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+  .eyebrow::before { content: ""; width: 34px; height: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+  .hero h1 { font-family: var(--head); font-weight: 700; font-size: clamp(44px, 6.4vw, 96px); line-height: .92; letter-spacing: -.02em; margin: 14px 0 12px; text-transform: uppercase; }
+  .hero h1 .line { display: block; overflow: hidden; } .hero h1 .line span { display: inline-block; animation: rise 1s cubic-bezier(.2,.8,.2,1) both; }
+  .hero h1 .line:nth-child(2) span { animation-delay: .12s; }
+  @keyframes rise { from { transform: translateY(105%); } }
+  .meta { display: flex; gap: 12px; align-items: center; color: var(--muted); font-size: 13px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tag { border: 1px solid rgba(255,255,255,.25); padding: 2px 7px; border-radius: 3px; font-size: 11px; letter-spacing: .08em; color: #ddd; }
+  .hero p { color: #c9c9d1; font-size: 15px; line-height: 1.6; margin: 0 0 22px; font-weight: 300; }
+  .btns { display: flex; gap: 12px; }
+  .btn { border: 0; cursor: pointer; font-family: var(--head); font-size: 15px; letter-spacing: .14em; text-transform: uppercase; padding: 13px 24px; border-radius: 4px; transition: transform .2s, box-shadow .2s, background .2s; }
+  .btn.primary { background: var(--accent); color: #fff; box-shadow: 0 10px 30px var(--accent-glow); } .btn.primary:hover { transform: translateY(-2px); }
+  .btn.ghost { background: rgba(255,255,255,.1); color: #fff; } .btn.ghost:hover { background: rgba(255,255,255,.18); }
+  .dots { position: absolute; z-index: 2; right: 44px; bottom: 14%; display: flex; gap: 8px; }
+  .dots i { width: 26px; height: 3px; background: rgba(255,255,255,.25); cursor: pointer; position: relative; overflow: hidden; }
+  .dots i.on::after { content: ""; position: absolute; inset: 0; background: #fff; animation: prog 7s linear forwards; transform-origin: left; }
+  @keyframes prog { from { transform: scaleX(0); } }
+
+  section { padding: 0 44px; margin: 0 0 42px; }
+  .sh { display: flex; align-items: baseline; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .sh h2 { margin: 0; font-family: var(--head); font-weight: 600; font-size: 22px; letter-spacing: .06em; text-transform: uppercase; }
+  .sh .c { color: var(--muted); font-size: 13px; }
+  .sh .more { margin-left: auto; color: var(--muted); font-size: 13px; cursor: pointer; } .sh .more:hover { color: #fff; }
+
+  .split { display: grid; grid-template-columns: minmax(360px, 1fr) 1.35fr; gap: 20px; height: 560px; }
+  .glass { position: relative; background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015)); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+  .glass .hd { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); font-family: var(--head); font-size: 13px; letter-spacing: .22em; text-transform: uppercase; color: #ddd; }
+  .live { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: blink 1.6s infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+  .glass .hd .r { margin-left: auto; color: var(--muted); letter-spacing: .1em; font-size: 11px; }
+  .msgs { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+  .m { animation: fadeUp .5s cubic-bezier(.2,.8,.2,1) both; font-size: 14px; line-height: 1.6; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } }
+  .m.user { align-self: flex-end; max-width: 85%; background: rgba(255,255,255,.08); border: 1px solid var(--line); padding: 10px 14px; border-radius: 10px 10px 2px 10px; }
+  .m.bot { align-self: flex-start; max-width: 95%; padding-left: 14px; border-left: 2px solid var(--accent); }
+  .m.bot b { color: #fff; font-weight: 600; } .m ul { margin: 6px 0 0; padding-left: 18px; } .m li { margin: 3px 0; color: #d6d6dd; }
+  .who { font-family: var(--head); font-size: 11px; letter-spacing: .25em; color: var(--accent); margin-bottom: 4px; }
+  .steps { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .st { display: flex; align-items: center; gap: 10px; opacity: .3; transition: opacity .3s; } .st.on, .st.ok { opacity: 1; }
+  .st i { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--muted); flex-shrink: 0; }
+  .st.on i { border-color: var(--accent); border-top-color: transparent; animation: spin .7s linear infinite; }
+  .st.ok i { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .code { margin: 4px 0 4px 22px; padding: 8px 10px; background: rgba(0,0,0,.45); border: 1px solid var(--line); border-radius: 6px; font: 11px ui-monospace, Menlo, monospace; color: #ff8a8d; white-space: pre; overflow-x: auto; }
+  .cites { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .cite { font-size: 11px; color: #ccc; border: 1px solid var(--line); background: rgba(255,255,255,.04); padding: 3px 9px; border-radius: 20px; text-decoration: none; }
+  a.cite:hover { border-color: var(--accent); color: #fff; }
+  .caret { display: inline-block; width: 2px; height: 16px; background: var(--accent); vertical-align: -3px; margin-left: 1px; animation: blink .8s steps(1) infinite; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 18px; border-top: 1px solid var(--line); }
+  .chip { font-size: 12px; color: #ccc; border: 1px solid var(--line); background: rgba(255,255,255,.03); padding: 6px 12px; border-radius: 20px; cursor: pointer; transition: all .2s; white-space: nowrap; }
+  .chip:hover { color: #fff; border-color: var(--accent); background: rgba(230,36,41,.12); }
+  .chip.on { color: #fff; border-color: var(--accent); background: rgba(230,36,41,.22); }
+  .chip .k { color: var(--muted); margin-left: 6px; font-variant-numeric: tabular-nums; }
+  form { display: flex; gap: 10px; padding: 12px 18px 16px; }
+  form input { flex: 1; background: rgba(0,0,0,.4); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; color: #fff; font: 14px var(--body); outline: none; }
+  form input:focus { border-color: var(--accent); }
+
+  .sky { position: relative; flex: 1; background: radial-gradient(ellipse at 50% 40%, rgba(230,36,41,.10), transparent 60%), #050507; }
+  svg#graph { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .edge { stroke: rgba(255,255,255,.12); stroke-width: 1; transition: stroke .4s, opacity .4s; }
+  .edge.hl { stroke-width: 1.8; stroke-dasharray: 3 5; animation: flow 1.2s linear infinite; } .edge.dim { opacity: .2; }
+  @keyframes flow { to { stroke-dashoffset: -16; } }
+  .node { cursor: grab; transition: opacity .4s; } .node.dim { opacity: .15; }
+  .node text { font-family: var(--head); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; fill: #cfcfd6; text-anchor: middle; pointer-events: none; }
+  .node .glow { opacity: .35; } .node.hl .glow { opacity: 1; animation: breathe 2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .node.hl text { fill: #fff; }
+  @keyframes breathe { 50% { transform: scale(1.5); opacity: .5; } }
+  .legend { position: absolute; left: 16px; bottom: 14px; display: flex; gap: 14px; font-size: 11px; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--c); box-shadow: 0 0 6px var(--c); }
+  .ucap { position: absolute; left: 16px; top: 14px; font-family: var(--head); letter-spacing: .2em; font-size: 12px; color: var(--muted); }
+  .ucap b { color: #fff; font-weight: 600; }
+  .empty { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); text-align: center; color: var(--muted); font-size: 13px; display: none; max-width: 360px; line-height: 1.5; }
+  .empty b { display: block; font-family: var(--head); letter-spacing: .1em; font-size: 22px; color: #fff; margin-bottom: 6px; text-transform: uppercase; }
+
+  .row { display: flex; gap: 14px; overflow-x: auto; padding: 14px 4px 22px; margin: -14px -4px 0; scroll-snap-type: x proximity; }
+  .poster { position: relative; flex: 0 0 186px; height: 270px; border-radius: 8px; overflow: hidden; cursor: pointer; scroll-snap-align: start;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5); border: 1px solid var(--line); transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s; }
+  .poster:hover { transform: scale(1.07) translateY(-4px); z-index: 2; box-shadow: 0 24px 50px rgba(0,0,0,.7), 0 0 0 1px var(--accent), 0 0 30px var(--accent-glow); }
+  .poster .art { position: absolute; inset: 0; transition: transform .6s; } .poster:hover .art { transform: scale(1.08); }
+  .poster .d { position: absolute; left: 12px; top: 10px; right: 10px; font-family: var(--head); font-weight: 700; font-size: 40px; line-height: 1; letter-spacing: -.03em; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,.55); overflow: hidden; text-overflow: ellipsis; }
+  .poster .d small { display: block; font-size: 11px; letter-spacing: .3em; -webkit-text-stroke: 0; color: rgba(255,255,255,.7); font-weight: 400; }
+  .poster .info { position: absolute; inset: auto 0 0 0; padding: 40px 12px 12px; background: linear-gradient(0deg, rgba(0,0,0,.94), transparent); }
+  .poster .t { font-family: var(--head); font-size: 15px; font-weight: 600; line-height: 1.1; text-transform: uppercase; letter-spacing: .02em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .poster .s { font-size: 10.5px; color: var(--muted); margin-top: 5px; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .phases { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .phase { position: relative; padding: 16px; border-radius: 8px; border: 1px solid var(--line); background: linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,.01)); overflow: hidden; transition: transform .3s, border-color .3s; }
+  .phase:hover { transform: translateY(-4px); border-color: var(--accent); }
+  .phase .n { font-family: var(--head); font-size: 54px; font-weight: 700; line-height: .9; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,.25); }
+  .phase .t { font-family: var(--head); text-transform: uppercase; letter-spacing: .12em; font-size: 14px; margin-top: 6px; } .phase .y { font-size: 12px; color: var(--muted); }
+
+  /* full index */
+  .ixbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .ixbar select { background: rgba(255,255,255,.05); color: #ddd; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font: 12px var(--body); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .tile { position: relative; padding: 12px 14px 12px 16px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,.025); cursor: pointer;
+    overflow: hidden; transition: border-color .25s, transform .25s, background .25s; animation: fadeUp .4s both; }
+  .tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--c); }
+  .tile:hover { border-color: rgba(255,255,255,.25); transform: translateY(-2px); background: rgba(255,255,255,.05); }
+  .tile .id { font-family: var(--head); font-weight: 600; font-size: 17px; letter-spacing: .02em; }
+  .tile .md { position: absolute; right: 10px; top: 12px; font-family: var(--head); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--c); }
+  .tile .nt { font-size: 12.5px; color: #c9c9d1; margin-top: 4px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 36px; }
+  .tile .fa { font-size: 11px; color: var(--muted); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sentinel { height: 60px; display: grid; place-items: center; color: var(--muted); font-size: 12px; }
+
+  /* reality drawer */
+  .drawer { position: fixed; right: 0; top: 0; bottom: 0; width: min(440px, 92vw); z-index: 60; background: rgba(10,10,14,.96); border-left: 1px solid var(--line);
+    transform: translateX(100%); transition: transform .5s cubic-bezier(.2,.8,.2,1); backdrop-filter: blur(16px); display: flex; flex-direction: column; }
+  .drawer.show { transform: none; box-shadow: -30px 0 80px rgba(0,0,0,.6); }
+  .drawer .ban { height: 210px; position: relative; flex-shrink: 0; }
+  .drawer .ban::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10,10,14,1), transparent 60%); }
+  .drawer .ban .n { position: absolute; left: 22px; bottom: 6px; z-index: 2; font-family: var(--head); font-weight: 700; font-size: 64px; line-height: .9; letter-spacing: -.03em; }
+  .drawer .ban .n small { display: block; font-size: 13px; letter-spacing: .4em; font-weight: 400; color: var(--accent); }
+  .drawer .bd { padding: 16px 22px 24px; overflow-y: auto; }
+  .drawer .x { position: absolute; right: 16px; top: 14px; z-index: 3; width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,.5); border: 1px solid var(--line); color: #fff; cursor: pointer; font-size: 14px; }
+  .drawer dl { display: grid; grid-template-columns: 120px 1fr; gap: 10px 14px; font-size: 13.5px; margin: 14px 0; }
+  .drawer dt { color: var(--muted); font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 11.5px; padding-top: 2px; } .drawer dd { margin: 0; line-height: 1.5; }
+  .drawer p.n2 { color: #d6d6dd; line-height: 1.6; font-size: 14.5px; }
+
+  .stats { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
+  .stat { padding: 16px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,.025); cursor: pointer; transition: border-color .25s; }
+  .stat:hover { border-color: var(--accent); }
+  .stat .n { font-family: var(--head); font-size: 30px; font-weight: 600; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 11px; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; margin-top: 2px; }
+  .foot { text-align: center; color: #55555f; font-size: 11px; letter-spacing: .06em; padding: 10px 20px 40px; line-height: 1.7; }
+  .foot a { color: #77777f; }
+
+  @media (max-width: 1000px) {
+    nav { padding: 12px 18px; flex-wrap: wrap; gap: 10px; } .search { width: 100%; } section { padding: 0 18px; } .hero-copy { left: 18px; right: 18px; }
+    .split { grid-template-columns: 1fr; height: auto; } .glass { height: 520px; } .phases { grid-template-columns: repeat(3, 1fr); } .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body class="lock">
+<div class="grain"></div><div class="vignette"></div><div class="sweep" id="sweep"></div>
+<div id="intro" class="letterbox"></div>
+
+<nav>
+  <div class="logo" id="logo" title="Replay opening">Ask the Multiverse</div>
+  <div class="divs" id="divs">
+    <span class="div on" data-k="all">All</span><span class="div" data-k="Film">Studios</span><span class="div" data-k="Television">Television</span>
+    <span class="div" data-k="Animation">Animation</span><span class="div" data-k="Comics">Comics</span><span class="div" data-k="Games">Games</span>
+    <span class="div" data-k="Beyond">Prose &amp; Beyond</span>
+  </div>
+  <div class="nav-r">
+    <label class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9a9aa6" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="usearch" placeholder="Search 5,000+ realities..." /></label>
+    <button class="ghostbtn" id="replay">&#8635; OPENING</button>
+  </div>
+</nav>
+
+<div class="hero" id="hero"></div>
+
+<section>
+  <div class="split">
+    <div class="glass">
+      <div class="hd"><span class="live"></span> Multiverse Console <span class="r">Grounded - cited</span></div>
+      <div class="msgs" id="msgs">
+        <div class="m bot"><div class="who">MULTIVERSE</div>Ask about any reality, hero, villain, team, rivalry or variant - across comics, film, television, animation, games and prose. Try <b>"Tell me about Earth-92131"</b>.</div>
+      </div>
+      <div class="chips" id="chips"></div>
+      <form id="form"><input id="q" placeholder="Ask the multiverse..." autocomplete="off" /><button class="btn primary">Ask</button></form>
+    </div>
+    <div class="glass">
+      <div class="hd"><span class="live"></span> Connections <span class="r" id="gr">Sample characters</span></div>
+      <div class="sky" id="sky">
+        <svg id="graph"></svg>
+        <div class="ucap" id="ucap">REALITY <b>ALL</b></div>
+        <div class="empty" id="empty"></div>
+        <div class="legend"><span style="--c:#e62429">Enemy</span><span style="--c:#a78bfa">Team</span><span style="--c:#38bdf8">Variant</span><span style="--c:#fbbf24">Ally</span><span style="--c:#34d399">Family</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="rows"></div>
+
+<section id="phaseSec">
+  <div class="sh"><h2>The Cinematic Timeline</h2><span class="c">Earth-199999</span></div>
+  <div class="phases" id="phases"></div>
+</section>
+
+<section id="index">
+  <div class="sh"><h2>The Complete Multiverse</h2><span class="c" id="ixcount">Loading realities...</span></div>
+  <div class="ixbar">
+    <div id="mchips" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    <select id="kind"><option value="all">Official + temporary</option><option value="official">Official numbers only</option><option value="temporary">Temporary (TRN) only</option></select>
+    <select id="sort"><option value="num">Sort: designation</option><option value="year">Sort: debut year</option><option value="notes">Sort: best described</option></select>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="sentinel" id="sentinel"></div>
+</section>
+
+<section>
+  <div class="sh"><h2>Multiverse Index</h2><span class="c">Real counts from the Marvel Database, synced for this preview. Click a medium to browse it.</span></div>
+  <div class="stats" id="stats"></div>
+</section>
+<div class="foot">Fan-made portfolio preview. Not affiliated with or endorsed by Marvel or Disney.<br/>Reality data from the <a href="https://marvel.fandom.com/wiki/Multiverse/Universe_Listing" target="_blank" rel="noopener">Marvel Database</a> on Fandom (CC BY-SA). Character links: hand-written sample.</div>
+
+<div class="drawer" id="drawer"><button class="x" id="dx">&#10005;</button><div id="dbody"></div></div>
+
+<script>
+if (location.search.includes("static")) document.documentElement.classList.add("static");
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function hue(s) { let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 3600; return h % 360; }
+function art(seed) { const h = hue(seed), h2 = (h + 40 + hue(seed + "x") % 90) % 360;
+  return `radial-gradient(circle at ${20 + h % 60}% ${15 + h2 % 50}%, hsla(${h},85%,55%,.9), transparent 55%),
+    radial-gradient(circle at ${90 - h2 % 50}% 95%, hsla(${h2},80%,45%,.85), transparent 60%), linear-gradient(${h % 180}deg, hsla(${h},60%,12%,1), #08080b)`; }
+
+/* =====================  OPENING SEQUENCE  ===================== */
+const HEROES = ["Avengers","X-Men","Thor","Storm","Loki","Wanda","Thanos","Doom","Venom","Groot","Miles","Blade","Hulk","Shuri","Kang","Logan",
+  "Gwen","Strange","Gamora","Deadpool","Magneto","Jean","Rocket","Carol","Namor","Galactus","Ultron","Nova","Daredevil","Kate"];
+let introTimers = [];
+function later(fn, ms) { introTimers.push(setTimeout(fn, ms)); }
+function endIntro() {
+  const el = $("#intro"); if (!el || el.classList.contains("out")) return;
+  introTimers.forEach(clearTimeout); introTimers = [];
+  el.classList.add("out"); document.body.classList.remove("lock");
+  setTimeout(() => { el.innerHTML = ""; el.style.display = "none"; }, 1000);
+}
+function playIntro() {
+  if (document.documentElement.classList.contains("static")) { document.body.classList.remove("lock"); return; }
+  const el = $("#intro"); el.style.display = ""; el.className = "letterbox"; document.body.classList.add("lock"); scrollTo(0, 0);
+  el.innerHTML = `<div class="book" id="book"></div><div class="streaks" id="streaks"></div><div class="redglow" id="rg"></div><div class="flare" id="flare"></div>
+    <div class="stage"><div class="word" id="word"><span class="slab"></span><span class="txt" id="wtxt">Ask the Multiverse</span><span class="shine"></span></div>
+    <div class="tagline" id="tagline">EVERY REALITY &middot; EVERY ERA</div></div><div class="flash" id="flash"></div><button class="skip" id="skip">SKIP &#9656;</button>`;
+  $("#skip").onclick = endIntro;
+
+  // Act 1 - comic pages flip, accelerating (0 - 3.0s)
+  const book = $("#book"); const LEAVES = 22; const layouts = ["1fr 1fr / 2fr 1fr", "1fr 1fr 1fr / 1fr 1fr", "2fr 1fr / 1fr 1fr 1fr", "1fr / 1fr 1fr"];
+  for (let i = 0; i < LEAVES; i++) {
+    const lf = document.createElement("div"); lf.className = "leaf"; lf.style.zIndex = LEAVES - i;
+    const lay = layouts[i % layouts.length]; lf.style.grid = lay;
+    const cells = lay.split("/").reduce((a, s) => a * s.trim().split(/\s+/).length, 1);
+    lf.innerHTML = Array.from({ length: cells }, (_, k) => { const nm = HEROES[(i * 3 + k) % HEROES.length];
+      return `<div class="pn" style="background:${art(nm + i + k)}"><b>${k === 0 ? nm : ""}</b></div>`; }).join("");
+    book.append(lf);
+  }
+  let t = 250; [...book.children].forEach((lf, i) => { const dur = Math.max(70, 420 - i * 22); lf.style.setProperty("--d", dur + "ms");
+    later(() => lf.classList.add("flip"), t); t += Math.max(55, 260 - i * 13); });
+
+  // Act 2 - streaks, then the title pulls back with the montage flickering inside the letters (3.0 - 5.1s)
+  const word = $("#word"), wtxt = $("#wtxt");
+  let flick; const montage = () => { wtxt.style.backgroundImage = art(HEROES[Math.floor(Math.random() * HEROES.length)] + Math.random()); };
+  later(() => { $("#streaks").classList.add("on"); $("#flash").classList.add("on"); }, 2900);
+  later(() => { montage(); flick = setInterval(montage, 90); introTimers.push(flick); book.style.transition = "opacity .5s"; book.style.opacity = ".0";
+    word.classList.add("act2"); $("#rg").classList.add("on"); }, 3050);
+
+  // Act 3 - red slab sweeps in behind, letters turn white, shine + flare, tagline (5.1 - 7.2s)
+  later(() => { clearInterval(flick); wtxt.style.backgroundImage = "none"; word.classList.add("act3"); $("#flare").classList.add("on"); }, 5100);
+  later(() => $("#tagline").classList.add("on"), 5500);
+  later(endIntro, 7600);
+}
+$("#replay").onclick = playIntro; $("#logo").onclick = playIntro;
+addEventListener("keydown", e => { if (e.key === "Escape") { endIntro(); closeDrawer(); } });
+playIntro();
+
+/* =====================  DATA  ===================== */
+const MED = {
+  Film: ["Studios", "#e62429", "rgba(230,36,41,.45)", "Cinematic Realities"], Television: ["Television", "#5b8def", "rgba(91,141,239,.45)", "Television Realities"],
+  Animation: ["Animation", "#ff7a1a", "rgba(255,122,26,.45)", "Animated Realities"], Comics: ["Comics", "#f43f5e", "rgba(244,63,94,.45)", "Comic Realities"],
+  Games: ["Games", "#8b5cf6", "rgba(139,92,246,.45)", "Game Realities"], Prose: ["Prose", "#14b8a6", "rgba(20,184,166,.45)", "Novels & Prose"],
+  "Other media": ["Other media", "#a3a3a3", "rgba(163,163,163,.35)", "Other Media Realities"],
+};
+const BEYOND = ["Prose", "Other media"];
+const FEATURED = ["Earth-616", "Earth-199999", "Earth-92131", "Earth-1610", "Earth-65", "Earth-1048", "Earth-838", "Earth-6160", "Earth-928", "Earth-295",
+  "Earth-807128", "Earth-2149", "Earth-90214", "Earth-10005", "Earth-96283", "Earth-120703", "Earth-26496", "Earth-8096", "Earth-12041", "Earth-534834", "Earth-11052", "Earth-13122"];
+let R = [], byR = {};
+const num = id => { const m = id.match(/-(?:TRN)?(\d+)/); return m ? +m[1] : 1e12; };
+const label = r => (r.notes || r.first || r.id).replace(/^(Home|Reality) (of|to) /, "").split(/(?<=\.)\s/)[0].slice(0, 90);
+const wiki = id => `https://marvel.fandom.com/wiki/${encodeURIComponent(id.replace(/ /g, "_"))}`;
+const rank = r => (FEATURED.includes(r.id) ? -1000 + FEATURED.indexOf(r.id) : 0) + (r.kind === "temporary" ? 50 : 0) + (r.notes ? 0 : 20) + Math.min(30, num(r.id) / 1e5);
+
+fetch("realities.json").then(r => r.json()).then(d => { R = d; R.forEach(r => byR[r.id] = r); boot(); });
+
+/* =====================  HERO  ===================== */
+const FEAT = [
+  ["Earth-616", "The Prime", "Reality", "The original continuity where it all began: the Fantastic Four, Spider-Man, the Avengers, the X-Men - and every hero since."],
+  ["Earth-199999", "The Cinematic", "Universe", "Six phases, dozens of films and series, one interconnected saga - from a cave in Afghanistan to the Multiverse Saga."],
+  ["Earth-92131", "X-Men", "'92 to '97", "The animated reality that defined a generation of mutants, revived for a new era."],
+  ["Earth-1048", "Insomniac's", "Spider-Man", "The video game reality of Marvel's Spider-Man, Miles Morales and Marvel's Wolverine."],
+  ["Earth-838", "The Illuminati's", "Earth", "Where a different council of heroes judged a visiting Doctor Strange."],
+  ["Earth-1610", "The Ultimate", "Universe", "A modern reboot of the classics - and the birthplace of Miles Morales."],
+];
+let slide = 0, slideT;
+function buildHero() {
+  $("#hero").innerHTML = FEAT.map(([d]) => `<div class="slide"><div class="art" style="background:${art(d)}"></div><div class="num">${d.replace("Earth-", "")}</div></div>`).join("") +
+    `<div class="hero-copy" id="hcopy"></div><div class="dots" id="dots">${FEAT.map((_, i) => `<i data-i="${i}"></i>`).join("")}</div>`;
+  $("#dots").addEventListener("click", e => e.target.dataset.i && showSlide(+e.target.dataset.i)); showSlide(0);
+}
+function showSlide(i) {
+  slide = (i + FEAT.length) % FEAT.length; const [d, a, b, desc] = FEAT[slide], r = byR[d] || {};
+  document.querySelectorAll(".slide").forEach((s, j) => s.classList.toggle("on", j === slide));
+  document.querySelectorAll(".dots i").forEach((s, j) => { s.classList.remove("on"); void s.offsetWidth; s.classList.toggle("on", j === slide); });
+  $("#hcopy").innerHTML = `<div class="eyebrow">Featured Reality - ${(MED[r.medium] || [r.medium])[0] || ""}</div>
+    <h1><span class="line"><span>${a}</span></span><span class="line"><span>${b}</span></span></h1>
+    <div class="meta"><span class="tag">${d.toUpperCase()}</span><span>First seen: ${r.first || "-"}</span></div><p>${desc}</p>
+    <div class="btns"><button class="btn primary" onclick="openDrawer('${d}')">&#9654;&nbsp; Explore Reality</button><button class="btn ghost" onclick="ask('Tell me about ${d}')">Ask About It</button></div>`;
+  clearTimeout(slideT); slideT = setTimeout(() => showSlide(slide + 1), 7000);
+}
+
+/* =====================  ROWS + INDEX  ===================== */
+let division = "all", ixMedium = "all";
+function inDivision(r, k = division) { return k === "all" || (k === "Beyond" ? BEYOND.includes(r.medium) : r.medium === k); }
+function poster(r) { const m = MED[r.medium];
+  return `<div class="poster" data-d="${r.id}"><div class="art" style="background:${art(r.id)}"></div>
+    <div class="d"><small>${r.id.includes("TRN") ? "EARTH-TRN" : r.id.split("-")[0].toUpperCase()}</small>${r.id.replace(/^Earth-(TRN)?/, "")}</div>
+    <div class="info"><div class="t">${label(r)}</div><div class="s" style="color:${m[1]}">${m[0]} - ${r.first || "Unknown debut"}</div></div></div>`; }
+function renderRows() {
+  const q = $("#usearch").value.toLowerCase().trim();
+  const match = r => !q || `${r.id} ${r.notes} ${r.first}`.toLowerCase().includes(q);
+  const keys = division === "all" ? ["Film", "Television", "Animation", "Games", "Comics", "Prose", "Other media"] : division === "Beyond" ? BEYOND : [division];
+  $("#rows").innerHTML = keys.map(k => { const all = R.filter(r => r.medium === k && match(r)); if (!all.length) return "";
+    const top = all.sort((a, b) => rank(a) - rank(b)).slice(0, 40);
+    return `<section><div class="sh"><h2>${MED[k][3]}</h2><span class="c">${all.length.toLocaleString()} realities</span><span class="more" data-m="${k}">See all &rsaquo;</span></div>
+      <div class="row">${top.map(poster).join("")}</div></section>`; }).join("") || `<section><div class="sh"><h2>No realities match "${q}"</h2></div></section>`;
+  $("#phaseSec").style.display = division === "all" || division === "Film" ? "" : "none";
+}
+$("#rows").addEventListener("click", e => { const m = e.target.closest(".more"); if (m) { setIx(m.dataset.m); $("#index").scrollIntoView({ behavior: "smooth" }); return; }
+  const p = e.target.closest(".poster"); if (p) openDrawer(p.dataset.d); });
+
+let ixList = [], ixShown = 0;
+function setIx(m) { ixMedium = m; renderIx(); }
+function renderIx() {
+  const q = $("#usearch").value.toLowerCase().trim(), kind = $("#kind").value, sort = $("#sort").value;
+  const base = R.filter(r => (kind === "all" || r.kind === kind) && (!q || `${r.id} ${r.notes} ${r.first}`.toLowerCase().includes(q)) && inDivision(r));
+  const counts = {}; base.forEach(r => counts[r.medium] = (counts[r.medium] || 0) + 1);
+  $("#mchips").innerHTML = `<span class="chip ${ixMedium === "all" ? "on" : ""}" data-m="all">All<span class="k">${base.length.toLocaleString()}</span></span>` +
+    Object.keys(MED).filter(k => counts[k]).map(k => `<span class="chip ${ixMedium === k ? "on" : ""}" data-m="${k}">${MED[k][0]}<span class="k">${counts[k].toLocaleString()}</span></span>`).join("");
+  ixList = base.filter(r => ixMedium === "all" || r.medium === ixMedium);
+  ixList.sort(sort === "year" ? (a, b) => (a.year || 9999) - (b.year || 9999) || num(a.id) - num(b.id)
+    : sort === "notes" ? (a, b) => rank(a) - rank(b) : (a, b) => (a.kind === b.kind ? 0 : a.kind === "official" ? -1 : 1) || num(a.id) - num(b.id) || a.id.localeCompare(b.id));
+  $("#ixcount").textContent = `${ixList.length.toLocaleString()} of ${R.length.toLocaleString()} realities - ${R.filter(r => r.kind === "official").length.toLocaleString()} official, ${R.filter(r => r.kind === "temporary").length.toLocaleString()} temporary`;
+  $("#grid").innerHTML = ""; ixShown = 0; moreIx();
+}
+function moreIx() {
+  const chunk = ixList.slice(ixShown, ixShown + 120); ixShown += chunk.length;
+  $("#grid").insertAdjacentHTML("beforeend", chunk.map((r, i) => { const m = MED[r.medium];
+    return `<div class="tile" data-d="${r.id}" style="--c:${m[1]};animation-delay:${(i % 24) * 15}ms"><div class="id">${r.id}</div><span class="md">${m[0]}${r.kind === "temporary" ? " - TRN" : ""}</span>
+      <div class="nt">${r.notes || "<span style='color:#666'>No description yet</span>"}</div><div class="fa">First: ${r.first || "unknown"}${r.year ? " (" + r.year + ")" : ""}</div></div>`; }).join(""));
+  $("#sentinel").textContent = ixShown < ixList.length ? `Loading more... ${ixShown.toLocaleString()} / ${ixList.length.toLocaleString()}` : `All ${ixList.length.toLocaleString()} shown`;
+}
+new IntersectionObserver(es => { if (es[0].isIntersecting && ixShown < ixList.length) moreIx(); }, { rootMargin: "600px" }).observe($("#sentinel"));
+$("#grid").addEventListener("click", e => { const t = e.target.closest(".tile"); if (t) openDrawer(t.dataset.d); });
+$("#mchips").addEventListener("click", e => { const c = e.target.closest(".chip"); if (c) setIx(c.dataset.m); });
+$("#kind").onchange = renderIx; $("#sort").onchange = renderIx;
+let st; $("#usearch").addEventListener("input", () => { clearTimeout(st); st = setTimeout(() => { renderRows(); renderIx(); }, 160); });
+
+$("#divs").addEventListener("click", e => { const t = e.target.closest(".div"); if (!t) return;
+  division = t.dataset.k; ixMedium = "all"; document.querySelectorAll(".div").forEach(x => x.classList.toggle("on", x === t));
+  const m = division === "all" || division === "Beyond" ? (division === "Beyond" ? MED.Prose : MED.Film) : MED[division];
+  document.documentElement.style.setProperty("--accent", m[1]); document.documentElement.style.setProperty("--accent-glow", m[2]);
+  const sw = $("#sweep"); sw.classList.remove("go"); void sw.offsetWidth; sw.classList.add("go"); renderRows(); renderIx(); });
+
+function renderStats() {
+  const c = {}; R.forEach(r => c[r.medium] = (c[r.medium] || 0) + 1);
+  const items = [["Realities", R.length, "all"], ...Object.keys(MED).map(k => [MED[k][0], c[k] || 0, k])];
+  $("#stats").innerHTML = items.map(([l, n, k]) => `<div class="stat" data-m="${k}"><div class="n" data-to="${n}">0</div><div class="l">${l}</div></div>`).join("");
+  $("#stats").onclick = e => { const s = e.target.closest(".stat"); if (s) { setIx(s.dataset.m); $("#index").scrollIntoView({ behavior: "smooth" }); } };
+  document.querySelectorAll(".stat .n").forEach(el => { const to = +el.dataset.to; let i = 0;
+    (function f() { const p = Math.min(1, ++i / 60), e = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(to * e).toLocaleString(); if (p < 1) setTimeout(f, 25); })(); });
+}
+const PHASES = [["1","Phase One","2008 - 2012"],["2","Phase Two","2013 - 2015"],["3","Phase Three","2016 - 2019"],["4","Phase Four","2021 - 2022"],["5","Phase Five","2023 - 2025"],["6","Phase Six","2025 - 2027"]];
+$("#phases").innerHTML = PHASES.map(([n, t, y]) => `<div class="phase" onclick="openDrawer('Earth-199999')"><div class="n">${n}</div><div class="t">${t}</div><div class="y">${y}</div></div>`).join("");
+
+/* =====================  DRAWER  ===================== */
+function openDrawer(id) {
+  const r = byR[id]; if (!r) return; const m = MED[r.medium];
+  const parent = (r.notes.match(/Earth-[\w]+/g) || []).filter(x => x !== id && byR[x]).slice(0, 4);
+  $("#dbody").innerHTML = `<div class="ban" style="background:${art(id)}"><div class="n"><small>${r.kind === "temporary" ? "TEMPORARY DESIGNATION" : "REALITY"}</small>${id}</div></div>
+    <div class="bd"><span class="tag" style="border-color:${m[1]};color:${m[1]}">${m[0].toUpperCase()}</span>
+    <p class="n2">${r.notes || "The wiki has no description for this reality yet."}</p>
+    <dl><dt>First appearance</dt><dd>${r.first || "Unknown"}${r.year ? ` (${r.year})` : ""}</dd><dt>Designation</dt><dd>${r.kind === "official" ? "Official (Marvel / Handbook)" : "Temporary (wiki-assigned TRN)"}</dd>
+    ${parent.length ? `<dt>Related</dt><dd>${parent.map(p => `<a class="cite" href="#" onclick="openDrawer('${p}');return false">${p}</a>`).join(" ")}</dd>` : ""}</dl>
+    <div class="btns"><button class="btn primary" onclick="closeDrawer();ask('Tell me about ${id}')">Ask About It</button>
+    <a class="btn ghost" style="text-decoration:none" href="${wiki(id)}" target="_blank" rel="noopener">Source &#8599;</a></div></div>`;
+  $("#drawer").classList.add("show"); focusGraph(id);
+}
+function closeDrawer() { $("#drawer").classList.remove("show"); }
+$("#dx").onclick = closeDrawer;
+
+/* =====================  GRAPH (sample characters)  ===================== */
+const N = [
+  ["thanos","Thanos","616",9,"#e62429"],["galactus","Galactus","616",10,"#e62429"],["surfer","Silver Surfer","616",6,"#38bdf8"],["thor","Thor","616",7,"#fbbf24"],
+  ["avengers","Avengers","616",11,"#a78bfa"],["xmen","X-Men","616",11,"#a78bfa"],["ff","Fantastic Four","616",9,"#a78bfa"],["ironman","Iron Man","616",7,"#fbbf24"],
+  ["cap","Captain America","616",7,"#fbbf24"],["wolverine","Wolverine","616",7,"#fbbf24"],["oml","Old Man Logan","807128",5,"#38bdf8"],["beast","Beast","616",5,"#fbbf24"],
+  ["storm","Storm","616",5,"#fbbf24"],["rogue","Rogue","616",5,"#fbbf24"],["spidey","Peter Parker","616",8,"#38bdf8"],["miles","Miles Morales","1610",6,"#38bdf8"],
+  ["gwen","Spider-Gwen","65",5,"#38bdf8"],["miguel","Spider-Man 2099","928",5,"#38bdf8"],["noir","Spider-Man Noir","90214",5,"#38bdf8"],["ham","Spider-Ham","8311",5,"#38bdf8"],
+  ["mayday","Spider-Girl","982",5,"#34d399"],["mcuspidey","Peter Parker","199999",6,"#38bdf8"],["mcuthanos","Thanos","199999",7,"#e62429"],["raimi","Peter Parker","96283",5,"#38bdf8"],
+  ["xm97","Wolverine","92131",5,"#38bdf8"],["insomniac","Peter Parker","1048",5,"#38bdf8"],
+].map(([id, label, u, r, c]) => ({ id, label, u: "Earth-" + u, r, c }));
+const E = [["surfer","galactus","ally"],["surfer","thanos","enemy"],["thor","galactus","enemy"],["thor","thanos","enemy"],["ff","galactus","enemy"],["avengers","thanos","enemy"],
+  ["thor","avengers","team"],["ironman","avengers","team"],["cap","avengers","team"],["wolverine","avengers","team"],["wolverine","xmen","team"],["beast","xmen","team"],
+  ["beast","avengers","team"],["storm","xmen","team"],["storm","avengers","team"],["rogue","xmen","team"],["rogue","avengers","team"],["spidey","avengers","team"],
+  ["spidey","miles","variant"],["spidey","gwen","variant"],["spidey","miguel","variant"],["spidey","mcuspidey","variant"],["spidey","noir","variant"],["spidey","ham","variant"],
+  ["spidey","raimi","variant"],["spidey","insomniac","variant"],["spidey","mayday","family"],["thanos","mcuthanos","variant"],["wolverine","oml","variant"],["wolverine","xm97","variant"],
+  ["surfer","ff","ally"],["ironman","cap","ally"],["mcuspidey","mcuthanos","enemy"],["miles","gwen","ally"]];
+const EC = { enemy: "#e62429", team: "#a78bfa", variant: "#38bdf8", ally: "#fbbf24", family: "#34d399" };
+const svg = $("#graph"), NS = "http://www.w3.org/2000/svg", sky = $("#sky");
+svg.innerHTML = `<defs><filter id="g" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="4"/></filter></defs>`;
+let W = sky.clientWidth || 700, H = sky.clientHeight || 480; const byId = {};
+N.forEach((n, i) => { const a = i / N.length * 6.283; Object.assign(n, { x: W / 2 + Math.cos(a) * 120, y: H / 2 + Math.sin(a) * 120, vx: 0, vy: 0 }); byId[n.id] = n; });
+const gE = document.createElementNS(NS, "g"), gN = document.createElementNS(NS, "g"); svg.append(gE, gN);
+const edgeEls = E.map(([a, b, t]) => { const l = document.createElementNS(NS, "line"); l.setAttribute("class", "edge"); Object.assign(l.dataset, { a, b, t }); gE.append(l); return l; });
+const nodeEls = N.map(n => { const g = document.createElementNS(NS, "g"); g.setAttribute("class", "node"); g.dataset.id = n.id;
+  g.innerHTML = `<circle class="glow" r="${n.r * 2.2}" fill="${n.c}" filter="url(#g)"/><circle r="${n.r}" fill="${n.c}"/><circle r="${n.r * .45}" fill="#fff" fill-opacity=".85"/>
+    <text y="${n.r + 15}">${n.label}${n.u !== "Earth-616" ? " - " + n.u.slice(6) : ""}</text>`;
+  g.addEventListener("click", () => openDrawer(n.u)); g.addEventListener("mousedown", e => startDrag(e, n)); gN.append(g); return g; });
+let alpha = 1, drag = null, clock = 0;
+function step() { W = sky.clientWidth; H = sky.clientHeight;
+  for (const a of N) for (const b of N) if (a !== b) { const dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy + .01, d = Math.sqrt(d2), f = 6400 / d2 * alpha; a.vx += dx / d * f; a.vy += dy / d * f; }
+  for (const [s, t] of E) { const a = byId[s], b = byId[t], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, k = (d - 120) * .015 * alpha; a.vx += dx / d * k; a.vy += dy / d * k; b.vx -= dx / d * k; b.vy -= dy / d * k; }
+  for (const n of N) { n.vx += (W / 2 - n.x) * .002; n.vy += (H / 2 - n.y) * .003; if (n === drag) { n.vx = n.vy = 0; continue; }
+    n.vx *= .82; n.vy *= .82; n.x += n.vx + Math.sin(clock / 90 + n.r) * .12; n.y += n.vy + Math.cos(clock / 110 + n.r) * .12;
+    n.x = Math.max(50, Math.min(W - 50, n.x)); n.y = Math.max(40, Math.min(H - 50, n.y)); }
+  alpha = Math.max(.08, alpha * .995); clock++; }
+for (let i = 0; i < 300; i++) step();
+(function render() { step();
+  edgeEls.forEach(l => { const a = byId[l.dataset.a], b = byId[l.dataset.b]; l.setAttribute("x1", a.x); l.setAttribute("y1", a.y); l.setAttribute("x2", b.x); l.setAttribute("y2", b.y); });
+  nodeEls.forEach((g, i) => g.setAttribute("transform", `translate(${N[i].x},${N[i].y})`)); requestAnimationFrame(render); })();
+function startDrag(e, n) { drag = n; alpha = .5; const r = svg.getBoundingClientRect();
+  const mv = ev => { n.x = ev.clientX - r.left; n.y = ev.clientY - r.top; }; const up = () => { drag = null; removeEventListener("mousemove", mv); removeEventListener("mouseup", up); };
+  addEventListener("mousemove", mv); addEventListener("mouseup", up); }
+function highlight(ids, edges) { const set = new Set(ids);
+  nodeEls.forEach(g => { const on = set.has(g.dataset.id); g.classList.toggle("hl", on); g.classList.toggle("dim", ids.length > 0 && !on); });
+  edgeEls.forEach(l => { const on = edges ? edges.some(([a, b]) => (l.dataset.a === a && l.dataset.b === b) || (l.dataset.a === b && l.dataset.b === a)) : set.has(l.dataset.a) && set.has(l.dataset.b);
+    l.classList.toggle("hl", on); l.classList.toggle("dim", ids.length > 0 && !on); l.style.stroke = on ? EC[l.dataset.t] : ""; }); alpha = .6; }
+function focusGraph(id) {
+  const r = byR[id]; $("#ucap").innerHTML = `REALITY <b>${id.toUpperCase()}</b>`;
+  const inU = N.filter(n => n.u === id).map(n => n.id), empty = $("#empty");
+  if (!inU.length) { highlight(["__"]); empty.innerHTML = `<b>${id}</b>${r ? label(r) : ""}<br/><br/>No characters from this reality in the preview's sample graph. The full build loads every character page linked to it.`; empty.style.display = "block"; }
+  else { empty.style.display = "none"; const linked = E.filter(([a, b]) => inU.includes(a) || inU.includes(b)).flat(); highlight([...new Set([...inU, ...linked])]); }
+}
+
+/* =====================  CONSOLE  ===================== */
+const QA = [
+  { q: "Who has fought both Thanos and Galactus?", query: "MATCH (c)-[:ENEMY_OF]->(:Thanos {earth:'616'})\nMATCH (c)-[:ENEMY_OF]->(:Galactus {earth:'616'})\nRETURN c ORDER BY appearances DESC",
+    a: "Top matches on <b>Earth-616</b>:<ul><li><b>Silver Surfer</b> - Galactus's former herald, who later opposed Thanos during the Infinity Gauntlet saga.</li><li><b>Thor</b> - has battled both on multiple occasions.</li></ul>",
+    nodes: ["surfer","thor","thanos","galactus"], edges: [["surfer","thanos"],["thor","thanos"],["thor","galactus"],["surfer","galactus"]] },
+  { q: "Show me Spider-People across the multiverse", query: "MATCH (v)-[:VARIANT_OF|FAMILY_OF]-(:PeterParker {earth:'616'})\nRETURN v.name, v.earth",
+    a: "Linked to <b>Peter Parker (Earth-616)</b>:<ul><li><b>Miles Morales</b> - Earth-1610</li><li><b>Spider-Gwen</b> - Earth-65</li><li><b>Spider-Man 2099</b> - Earth-928</li><li><b>Spider-Man Noir</b> - Earth-90214</li><li><b>Spider-Ham</b> - Earth-8311</li><li><b>Spider-Girl</b> - Earth-982</li><li>Screen Peters - MCU (199999), Raimi (96283), Insomniac (1048)</li></ul>",
+    nodes: ["spidey","miles","gwen","miguel","noir","ham","mayday","mcuspidey","raimi","insomniac"] },
+  { q: "How many realities exist?", query: "SELECT medium, kind, count(*) FROM realities\nGROUP BY medium, kind ORDER BY 3 DESC", a: null, nodes: [] },
+  { q: "Tell me about Earth-92131", a: null, nodes: [] },
+];
+QA.forEach(x => { const c = document.createElement("span"); c.className = "chip"; c.textContent = x.q; c.onclick = () => ask(x.q); $("#chips").append(c); });
+const box = $("#msgs"); let busy = false;
+function realityAnswer(id) { const r = byR[id]; if (!r) return null; const m = MED[r.medium][0];
+  return { query: `SELECT * FROM realities WHERE id = '${id}'`, nodes: N.filter(n => n.u === id).map(n => n.id), src: wiki(id),
+    a: `<b>${id}</b> is ${r.kind === "official" ? "an officially numbered" : "a temporarily designated (TRN)"} ${m.toLowerCase()} reality. ${r.notes ? r.notes : ""}<ul><li>First appearance: <b>${r.first || "unknown"}</b>${r.year ? " (" + r.year + ")" : ""}</li></ul>` }; }
+function countAnswer() { const c = {}; R.forEach(r => c[r.medium] = (c[r.medium] || 0) + 1);
+  return { query: QA[2].query, nodes: [], a: `The index currently holds <b>${R.length.toLocaleString()}</b> realities (${R.filter(r => r.kind === "official").length.toLocaleString()} official, ${R.filter(r => r.kind === "temporary").length.toLocaleString()} temporary):<ul>${Object.keys(MED).map(k => `<li>${MED[k][0]}: <b>${(c[k] || 0).toLocaleString()}</b></li>`).join("")}</ul>` }; }
+async function ask(text) {
+  if (busy || !text.trim()) return; busy = true;
+  const t = text.toLowerCase().trim(), idm = text.match(/earth-(trn)?\d+[a-z]?/i);
+  let item = idm ? realityAnswer(Object.keys(byR).find(k => k.toLowerCase() === idm[0].toLowerCase())) : null;
+  if (!item && /how many|count/.test(t)) item = countAnswer();
+  if (!item) item = QA.find(x => x.a && (x.q.toLowerCase() === t || x.q.toLowerCase().split(/\W+/).some(w => w.length > 5 && t.includes(w))));
+  add("m user", text);
+  const bot = add("m bot", `<div class="who">MULTIVERSE</div><div class="steps"><div class="st"><i></i>Resolving identities across realities</div><div class="st"><i></i>Planning the query</div>
+    <div class="st"><i></i>Traversing connections</div><div class="st"><i></i>Grounding the answer in sources</div></div>`);
+  const steps = bot.querySelectorAll(".st");
+  for (let i = 0; i < steps.length; i++) { steps[i].classList.add("on"); await sleep(420);
+    if (i === 1 && item) { const c = document.createElement("div"); c.className = "code"; c.textContent = item.query; steps[i].after(c); }
+    if (i === 2 && item && item.nodes.length) highlight(item.nodes, item.edges);
+    steps[i].classList.replace("on", "ok"); box.scrollTop = box.scrollHeight; }
+  const out = document.createElement("div"); bot.append(out);
+  await typeHTML(out, item ? item.a : "That isn't covered by this preview. In the full version I'd answer from the synced multiverse graph - or say plainly when the data doesn't cover it.");
+  if (item) bot.insertAdjacentHTML("beforeend", `<div class="cites">${item.src ? `<a class="cite" href="${item.src}" target="_blank" rel="noopener">Marvel Database &#8599;</a>` : `<span class="cite">Marvel Database (Fandom)</span>`}<span class="cite">Wikidata</span></div>`);
+  box.scrollTop = box.scrollHeight; busy = false; }
+function add(cls, html) { const d = document.createElement("div"); d.className = cls; d.innerHTML = html; box.append(d); box.scrollTop = box.scrollHeight; return d; }
+async function typeHTML(el, html) { const tmp = document.createElement("div"); tmp.innerHTML = html; const caret = document.createElement("span"); caret.className = "caret";
+  async function walk(src, dst) { for (const node of [...src.childNodes]) {
+    if (node.nodeType === 3) { const tn = document.createTextNode(""); dst.append(tn, caret); for (const ch of node.textContent) { tn.textContent += ch; box.scrollTop = box.scrollHeight; await sleep(8); } }
+    else { const c = node.cloneNode(false); dst.append(c); await walk(node, c); } } }
+  await walk(tmp, el); caret.remove(); }
+$("#form").addEventListener("submit", e => { e.preventDefault(); const q = $("#q"); ask(q.value || QA[0].q); q.value = ""; });
+
+function boot() { buildHero(); renderRows(); renderIx(); renderStats(); setTimeout(() => ask(QA[0].q), document.documentElement.classList.contains("static") ? 0 : 8400); }
+</script>
+</body>
+</html>

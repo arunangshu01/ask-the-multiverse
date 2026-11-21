@@ -1,0 +1,50 @@
+{
+  "_comment": "Reviewed medium overrides. Only add an entry when the first-appearance link gives the wrong medium for the reality as a whole (usually a tie-in released before the main work), and record the evidence. Every override is reported on the coverage page.",
+  "medium": {
+    "Earth-1048": {
+      "medium": "Games",
+      "reason": "first appearance is the tie-in novel Marvel's Spider-Man: Hostile Takeover (Aug 2018); the reality page is titled 'Insomniac Games Marvel Universe', the setting of Marvel's Spider-Man (video game, Sep 2018)",
+      "reviewed": "2026-11-21"
+    },
+    "Earth-96283": {
+      "medium": "Film",
+      "reason": "first appearance is the children's book Spider-Man Saves the Day; the reality page is titled 'Spider-Man film series'",
+      "reviewed": "2026-11-21"
+    },
+    "Earth-120703": {
+      "medium": "Film",
+      "reason": "first appearance is the tie-in comic The Amazing Spider-Man: The Movie Vol 1 1; the reality page is titled 'The Amazing Spider-Man film series'",
+      "reviewed": "2026-11-21"
+    },
+    "Earth-400083": {
+      "medium": "Film",
+      "reason": "first appearance is the tie-in Hulk (video game); the reality page is titled '2003 Hulk film'",
+      "reviewed": "2026-11-21"
+    },
+    "Earth-12041": {
+      "medium": "Animation",
+      "reason": "first appearance is the tie-in Ultimate Spider-Man Premiere Comic Vol 1 1; the reality page is titled '2012-2018 Marvel Animated Universe'",
+      "reviewed": "2026-11-21"
+    },
+    "Earth-17628": {
+      "medium": "Animation",
+      "reason": "first appearance is the tie-in comic Marvel Universe Guardians of the Galaxy Vol 1 1; the reality page is titled '2015-2020 Marvel Animated Universe'",
+      "reviewed": "2026-11-21"
+    },
+    "Earth-86445": {
+      "medium": "Animation",
+      "reason": "first appearance is the tie-in comic Your Friendly Neighborhood Spider-Man Vol 1 1; the reality page is titled 'Your Friendly Neighborhood Spider-Man (TV series)', an animated series",
+      "reviewed": "2026-11-21"
+    },
+    "Earth-10022": {
+      "medium": "Animation",
+      "reason": "first appearance is the tie-in Planet Hulk: Gladiators (video game); the reality page is titled 'Planet Hulk (film) animated film'",
+      "reviewed": "2026-11-21"
+    },
+    "Earth-74924": {
+      "medium": "Games",
+      "reason": "first appearance is the Basic Set Battle Book (filed under the Novel Template); the reality page is titled 'Marvel Super Heroes Role-Playing Game'",
+      "reviewed": "2026-11-21"
+    }
+  }
+}
