@@ -44,6 +44,7 @@ Golden fixture (recorded real responses for well-known realities): `.venv/bin/py
 Check desktop (1440), tablet (~820) and phone (~390) after UI changes. Headless Chrome enforces a ~500px minimum window, so for phone shots load the page in a 390px-wide iframe.
 
 ## Deployment
+- Live: https://multiverse.arunangshupramanik.com (also `ask-the-multiverse.web.app`), GCP project `multiverse-261126`. DNS is on Cloudflare: CNAME `multiverse` -> `ask-the-multiverse.web.app` (DNS only) plus TXT `_acme-challenge.multiverse` for the certificate; keep both.
 - Firebase Hosting `ask-the-multiverse` + Cloud Run `multiverse-api` (asia-south1, scale to zero, max 1) + bucket `<project>-multiverse-data` in a dedicated GCP project; guide in `docs/deploy-gcp.md`.
 - The API downloads `serve/latest.json` and the DuckDB it names from the bucket at start-up and re-checks every 15 min (`app/snapshot.py`, `MULTIVERSE_SNAPSHOT_BUCKET`); unset locally.
 - `.github/workflows/deploy.yml` runs after successful push CI on `main`, waits for the GitHub `production` environment approval (the user approves, never the assistant), keyless WIF. `sync.yml` (weekly + manual) rebuilds the data with its own WIF pool and service account that can only write the data bucket; it uploads the database first and the pointer last, and the graph build compares row counts with the live snapshot (`serve/published.json`).

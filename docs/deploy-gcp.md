@@ -1,5 +1,8 @@
 # Deploying Ask the Multiverse to Google Cloud
 
+**Production:** https://multiverse.arunangshupramanik.com (Firebase site `ask-the-multiverse`, GCP project
+`multiverse-261126`, live since 26 Nov 2026). The steps below are how it was set up; re-use them for a rebuild.
+
 Same pattern as Flowbench, doppel and mahakal, in its **own GCP project**:
 
 - **Firebase Hosting** (site `ask-the-multiverse`, custom domain
@@ -266,8 +269,12 @@ python3 scripts/smoke.py https://ask-the-multiverse.web.app
 2. Add the DNS records Firebase shows at the DNS provider for `arunangshupramanik.com` (the
    same place as the other subdomains). Do not change the existing records for the apex or
    other subdomains.
-3. Wait for Firebase to show **Connected** (certificate issuance can take up to a day), then
-   run `python3 scripts/smoke.py https://multiverse.arunangshupramanik.com`.
+3. Also add the certificate record Firebase lists under **Advanced** (or in the API's
+   `cert.verification.dns`): type `TXT`, name `_acme-challenge.multiverse`, the value it shows. Without it the
+   domain can stay at "Needs setup" / "Minting certificate" for hours; with it the certificate was issued in about
+   10 minutes. On Cloudflare, keep the CNAME on **DNS only** (grey cloud) and keep both records for renewals.
+4. Wait for Firebase to show **Connected**, then run
+   `python3 scripts/smoke.py https://multiverse.arunangshupramanik.com`.
 
 ## Operations and rollback
 
