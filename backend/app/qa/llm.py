@@ -1,4 +1,4 @@
-"""Groq (primary) and Gemini (fallback) chat calls, low temperature, JSON or text."""
+"""Groq (primary) and Gemini (fallback) chat calls, temperature 0, JSON or text."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ def configured() -> bool:
 async def _groq(system: str, user: str, as_json: bool, max_tokens: int) -> str | None:
     if not settings.GROQ_API_KEY:
         return None
-    payload = {"model": settings.GROQ_MODEL, "temperature": 0.1, "max_tokens": max_tokens,
+    payload = {"model": settings.GROQ_MODEL, "temperature": 0, "max_tokens": max_tokens,
                "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
     if as_json:
         payload["response_format"] = {"type": "json_object"}
@@ -36,7 +36,7 @@ async def _groq(system: str, user: str, as_json: bool, max_tokens: int) -> str |
 async def _gemini(system: str, user: str, as_json: bool, max_tokens: int) -> str | None:
     if not settings.GEMINI_API_KEY:
         return None
-    config = {"temperature": 0.1, "maxOutputTokens": max_tokens}
+    config = {"temperature": 0, "maxOutputTokens": max_tokens}
     if as_json:
         config["responseMimeType"] = "application/json"
     payload = {"system_instruction": {"parts": [{"text": system}]}, "contents": [{"parts": [{"text": user}]}],

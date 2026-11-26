@@ -29,9 +29,9 @@ def store(data_dir):
     ("What is the origin of Spider-Man?", "origin", {"name": "Spider-Man"}),
     ("How did Hulk get his powers?", "origin", {"name": "Hulk"}),
     ("What are Thor's powers?", "origin", {"name": "Thor"}),
-    ("Who killed Gwen Stacy?", "deaths", {"name": "Gwen Stacy", "direction": "victim"}),
-    ("How did Gwen Stacy die?", "deaths", {"name": "Gwen Stacy", "direction": "victim"}),
-    ("Who has Thanos killed?", "deaths", {"name": "Thanos", "direction": "killer"}),
+    ("Who killed Gwen Stacy?", "death_of", {"name": "Gwen Stacy"}),
+    ("How did Gwen Stacy die?", "death_of", {"name": "Gwen Stacy"}),
+    ("Who has Thanos killed?", "kills", {"name": "Thanos"}),
     ("Are Thor and Loki enemies?", "relationship", {"a": "Thor", "b": "Loki"}),
     ("How are Wolverine and Sabretooth related?", "relationship", {"a": "Wolverine", "b": "Sabretooth"}),
     ("Magneto vs Professor X", "relationship", {"a": "Magneto", "b": "Professor X"}),
@@ -69,6 +69,10 @@ def test_team_overlap_variants_first_appearance(store):
     f = tools.run(store, "first_appearance", {"name": "Spider-Man"})
     assert "Amazing Fantasy Vol 1 15" in f.answer and "(1962)" in f.answer
     assert tools.run(store, "first_appearance", {"name": "Nobody Atall"}).ok is False
+    # LLM plans often add the reality to a character name; that must still answer for the character
+    g = tools.run(store, "first_appearance", {"name": "Spider-Man (Earth-616)"})
+    assert g.resolved == {"entity": "Peter Parker (Earth-616)"} and "Amazing Fantasy Vol 1 15" in g.answer
+    assert tools.run(store, "first_appearance", {"name": "Earth-616"}).tool == "first_appearance"
 
 
 def test_counts_family_events_creators(store):
@@ -90,7 +94,7 @@ def test_relationship_tools(store):
     assert "no story" in tools.run(store, "first_fight", {"a": "Thor", "b": "Peter Parker"}).answer
     a = tools.run(store, "allies", {"name": "Thor"})
     assert {x["id"] for x in a.rows} == {"Norrin Radd (Earth-616)", "Adam Warlock (Earth-616)"}
-    d = tools.run(store, "deaths", {"name": "Thor", "direction": "killer"})
+    d = tools.run(store, "kills", {"name": "Thor"})
     assert [x["id"] for x in d.rows] == ["Loki Laufeyson (Earth-616)"]
     o = tools.run(store, "origin", {"name": "Spider-Man"})
     assert "radioactive spider" in o.answer and "Queens" in o.answer and "Spider-Physiology" in o.answer
@@ -195,3 +199,10 @@ def test_who_appears_lists_roles_and_falls_back_to_teams(store):
     assert {x["id"] for x in r.rows} == {"Galan (Earth-616)", "Norrin Radd (Earth-616)"} and "Antagonists" in r.answer
     assert tools.run(store, "who_appears", {"work": "X-Men"}).tool == "team_members"
     assert tools.run(store, "who_appears", {"work": "No Such Story"}).ok is False
+
+
+def test_tool_run_maps_a_single_misnamed_argument(store):
+    r = tools.run(store, "team_members", {"name": "Avengers", "status": "current"})
+    assert r.resolved == {"team": "Avengers (Earth-616)"}
+    with pytest.raises(ValueError):
+        tools.run(store, "fought_both", {"x": "Thanos", "y": "Galactus"})

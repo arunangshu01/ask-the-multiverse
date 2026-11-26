@@ -189,12 +189,12 @@ def _relationship3(m):
 
 @rule(r"^(?:who\s+killed|who\s+murdered|how\s+did\s+(?=.+\s+die\b))\s*(.+?)(?:\s+die)?" + _Q)
 def _killed(m):
-    return "deaths", {"name": _strip(m.group(1)), "direction": "victim"}
+    return "death_of", {"name": _strip(m.group(1))}
 
 
 @rule(r"^(?:who|which\s+characters?)\s+(?:has|have|did)\s+(.+?)\s+(?:killed|kill|murdered|murder)" + _Q)
 def _kills(m):
-    return "deaths", {"name": _strip(m.group(1)), "direction": "killer"}
+    return "kills", {"name": _strip(m.group(1))}
 
 
 @rule(r"^(?:who\s+(?:appears?|appeared|is|was|are|were)\s+in|who\s+(?:is|was)\s+featured\s+in|(?:what\s+is\s+)?(?:the\s+)?cast\s+of|"

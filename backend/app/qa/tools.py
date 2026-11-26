@@ -210,7 +210,8 @@ def entity_info(store: Store, name: str) -> Result:
 
 
 def first_appearance(store: Store, name: str) -> Result:
-    if resolve.REALITY_ID.search(name):
+    # only a bare designation is a reality; "Spider-Man (Earth-616)" names a character in that reality
+    if resolve.REALITY_ID.fullmatch(name.strip(" ?.!'\"")):
         r = reality_info(store, name)
         r.tool = "first_appearance"
         return r
@@ -493,9 +494,10 @@ WHERE ra.src = $a AND rb.src = $b AND ra.type LIKE 'event_%' AND rb.type LIKE 'e
 
 def deaths(store: Store, name: str, direction: str = "victim") -> Result:
     """direction=victim: who killed `name` (its KilledBy field); direction=killer: whose pages list `name` as killer."""
+    tool = "kills" if direction == "killer" else "death_of"
     e, alts = resolve.best(store, name)
     if not e:
-        return _missing("deaths", "a character", name)
+        return _missing(tool, "a character", name)
     p = {"id": e["id"]}
     cites = [_cite(f"Marvel Database: {e['id']}", e["id"])]
     if direction == "killer":
@@ -504,7 +506,7 @@ FROM relations r JOIN entities x ON x.id = r.src LEFT JOIN appearance_counts ac 
 WHERE r.dst = $id AND r.type = 'killed_by' ORDER BY appearances DESC, r.src"""
         rows = store.rows(sql, p)
         if not rows:
-            return Result("deaths", True, f"No character page lists {_name(e)} in its Killed By field.",
+            return Result(tool, True, f"No character page lists {_name(e)} in its Killed By field.",
                           sql=show_sql(sql, p), citations=cites, nodes=[e["id"]], resolved={"entity": e["id"]})
         lines = [f"**{len(rows):,}** character pages list **{_name(e)}** in their Killed By field:"]
         lines += [f"- {_name(r)}" + (f" - {r['note']}" if r["note"] else "") for r in rows[:25]]
@@ -512,7 +514,7 @@ WHERE r.dst = $id AND r.type = 'killed_by' ORDER BY appearances DESC, r.src"""
             lines.append(f"...and {len(rows) - 25} more.")
         lines.append("Many characters on the wiki have died and returned; this lists what each page records.")
         cites += [_cite(f"Marvel Database: {r['id']}", r["id"]) for r in rows[:6]]
-        return Result("deaths", True, "\n".join(lines), rows=rows, sql=show_sql(sql, p), citations=cites,
+        return Result(tool, True, "\n".join(lines), rows=rows, sql=show_sql(sql, p), citations=cites,
                       nodes=[e["id"]] + [r["id"] for r in rows[:20]], edges=[[e["id"], r["id"]] for r in rows[:20]],
                       resolved={"entity": e["id"]}, note=_alts_note(alts))
     sql = """SELECT c.id, c.death, c.cause_of_death, r.dst AS killer, x.label AS killer_label, r.note
@@ -520,7 +522,7 @@ FROM characters c LEFT JOIN relations r ON r.src = c.id AND r.type = 'killed_by'
 WHERE c.id = $id ORDER BY r.dst"""
     rows = store.rows(sql, p)
     if not rows or not (rows[0]["death"] or rows[0]["cause_of_death"] or rows[0]["killer"]):
-        return Result("deaths", True, f"The wiki page for {_name(e)} records no death.", sql=show_sql(sql, p),
+        return Result(tool, True, f"The wiki page for {_name(e)} records no death.", sql=show_sql(sql, p),
                       citations=cites, nodes=[e["id"]], resolved={"entity": e["id"]}, note=_alts_note(alts))
     r0 = rows[0]
     lines = [f"Death recorded on the wiki page for **{_name(e)}**:"]
@@ -533,7 +535,7 @@ WHERE c.id = $id ORDER BY r.dst"""
         lines.append("- Killed by: " + ", ".join(_name({"id": r["killer"], "label": r["killer_label"]}) +
                                                  (f" ({r['note']})" if r["note"] else "") for r in killers))
     lines.append("Many characters on the wiki have died and returned; this is what the page records.")
-    return Result("deaths", True, "\n".join(lines), rows=rows, sql=show_sql(sql, p), citations=cites,
+    return Result(tool, True, "\n".join(lines), rows=rows, sql=show_sql(sql, p), citations=cites,
                   nodes=[e["id"]] + [r["killer"] for r in killers], edges=[[e["id"], r["killer"]] for r in killers],
                   resolved={"entity": e["id"]}, note=_alts_note(alts))
 
@@ -751,10 +753,12 @@ TOOLS = {
     "relationship": (relationship, ["a", "b"],
                      "How two characters/teams are connected: family, deaths, shared teams, events, how often they "
                      "fought or teamed up. Use for 'are X and Y enemies', 'how are X and Y related', 'X vs Y'."),
-    "first_fight": (first_fight, ["a", "b"], "When a first fought b (earliest story on opposite sides) and how many times."),
-    "deaths": (deaths, ["name", "direction?"],
-               "Deaths from the wiki's Killed By fields. direction=victim (default): who killed name and how; "
-               "direction=killer: who name has killed."),
+    "first_fight": (first_fight, ["a", "b"], "Has a ever fought b, when a first fought b, how many times they fought "
+                    "(earliest story on opposite sides and the count)."),
+    "death_of": (lambda store, name: deaths(store, name, "victim"), ["name"],
+                 "How a character died and who killed them (the character's Killed By field). 'Who killed X?'"),
+    "kills": (lambda store, name: deaths(store, name, "killer"), ["name"],
+              "Characters whose pages list this character as their killer. 'Who has X killed?'"),
     "who_appears": (who_appears, ["work", "role?"],
                     "Characters listed in one story page (comic issue like 'Fantastic Four Vol 1 48', episode, film like "
                     "'Avengers: Endgame', game, novel); role: featured|supporting|antagonist|other."),
@@ -763,8 +767,10 @@ TOOLS = {
     "team_members": (team_members, ["team", "status?"], "Members of a team; status: current|former|all."),
     "variants": (variants, ["name"], "Every variant of a character across realities."),
     "relatives": (relatives, ["name", "relation?"], "Family of a character; relation: parent|child|sibling|spouse|relative|clone."),
-    "creators_of": (creators_of, ["name"], "Who created a character or team."),
-    "created_by": (created_by, ["creator"], "Characters created by a person (e.g. Jack Kirby)."),
+    "creators_of": (creators_of, ["name"], "Who created a given character or team (input: the character, "
+                    "e.g. 'Who created Wolverine?')."),
+    "created_by": (created_by, ["creator"], "Characters created by a real-world writer or artist (input: the person's "
+                   "name as written, e.g. 'Steve Ditko'; use for 'characters created by X' / 'what did X create')."),
     "event_sides": (event_sides, ["event"], "Protagonists and antagonists of an event (e.g. Infinity Gauntlet)."),
 }
 
@@ -774,6 +780,9 @@ def run(store: Store, tool: str, args: dict) -> Result:
     allowed = {p.rstrip("?") for p in params}
     clean = {k: v for k, v in args.items() if k in allowed and v not in (None, "")}
     missing = [p for p in params if not p.endswith("?") and p not in clean]
+    extra = [v for k, v in args.items() if k not in allowed and isinstance(v, str) and v]
+    if len(missing) == 1 and len(extra) == 1:  # LLM plans sometimes say {"name": ...} for {"team": ...}
+        clean[missing.pop()] = extra[0]
     if missing:
         raise ValueError(f"{tool} needs {', '.join(missing)}")
     return fn(store, **clean)
