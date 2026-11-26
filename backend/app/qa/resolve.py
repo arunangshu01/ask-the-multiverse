@@ -69,8 +69,11 @@ def spans(store: Store, question: str, max_words: int = 5) -> list[dict]:
     grams = {g for g in grams if len(g) > 2 and g not in {"the", "and", "who", "has", "have", "both", "been", "also"}}
     if not grams:
         return []
-    return store.rows("""SELECT nm.name AS span, any_value(e.id ORDER BY coalesce(c.present, 0) DESC) AS top_entity,
-            any_value(e.kind ORDER BY coalesce(c.present, 0) DESC) AS kind, count(DISTINCT e.id) AS matches
-        FROM names nm JOIN entities e ON e.id = nm.entity LEFT JOIN appearance_counts c ON c.entity = e.id
-        WHERE nm.name IN (SELECT unnest($g)) GROUP BY 1 ORDER BY length(nm.name) DESC LIMIT 12""",
-                      {"g": sorted(grams)})
+    found = store.rows("""SELECT nm.name AS span, count(DISTINCT nm.entity) AS matches FROM names nm
+        WHERE nm.name IN (SELECT unnest($g)) GROUP BY 1 ORDER BY length(nm.name) DESC LIMIT 12""", {"g": sorted(grams)})
+    out = []
+    for f in found:  # the same ranking the tools use, so the LLM sees the entity a tool would pick
+        top = candidates(store, f["span"], limit=1)
+        if top:
+            out.append({**f, "top_entity": top[0]["id"], "kind": top[0]["kind"]})
+    return out

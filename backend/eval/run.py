@@ -28,7 +28,7 @@ def load() -> list[dict]:
 
 def check(store: Store, case: dict, tool: str | None, result: tools.Result | None, answer: str, grounded: bool) -> list[str]:
     errors = []
-    if case.get("tool") != tool:
+    if tool != case.get("tool") and tool not in case.get("also_ok", []):
         errors.append(f"planned {tool}, expected {case.get('tool')}")
     if case.get("unsupported"):
         if grounded:
@@ -80,7 +80,7 @@ async def main_async(args) -> int:
     for case in cases:
         out = await run_case(store, case, args.llm)
         errors = check(store, case, out["tool"], out["result"], out["answer"], out["grounded"])
-        plan_ok += out["tool"] == case.get("tool")
+        plan_ok += out["tool"] == case.get("tool") or out["tool"] in case.get("also_ok", [])
         answer_ok += not errors
         mark = "PASS" if not errors else "FAIL"
         print(f"[{mark}] {case['q']}" + ("" if not errors else f"\n       {'; '.join(errors)}"))

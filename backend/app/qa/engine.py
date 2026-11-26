@@ -26,7 +26,9 @@ Tools (args ending in ? are optional; pass names as written by the user, ids are
 
 %s
 Rules: never invent ids or facts; prefer a tool; SQL must be a single read-only SELECT over the tables above;
-questions about real-world box office, actors' private lives, opinions or rankings the data has no column for are unsupported."""
+"X vs Y" or "are X and Y enemies" means relationship; "has X fought Y" / "when did X first fight Y" means first_fight;
+questions about real-world box office, actors' private lives, opinions, who would win a fight, who is stronger, or
+rankings the data has no column for are unsupported."""
 
 ANSWER_SYSTEM = """You write the answer for "Ask the Multiverse" using ONLY the JSON rows given.
 Rules: do not add any fact, name or number that is not in the rows; if the rows are empty say the data has no match;
@@ -35,7 +37,7 @@ refer to sources with [n] markers matching the numbered citation list. Plain ASC
 
 EDGE_KIND = {"fought_both": "enemy", "opponents": "enemy", "team_overlap": "team", "team_members": "team",
              "variants": "variant", "relatives": "family", "event_sides": "ally", "allies": "ally",
-             "first_fight": "enemy", "deaths": "enemy", "relationship": "enemy", "who_appears": "team"}
+             "first_fight": "enemy", "death_of": "enemy", "kills": "enemy", "relationship": "enemy", "who_appears": "team"}
 _cache: OrderedDict[str, tuple[float, list[dict]]] = OrderedDict()
 CACHE_TTL = 3600
 
@@ -101,7 +103,7 @@ async def ask(store: Store, question: str) -> AsyncIterator[dict]:
     plan, planner, unsupported = None, "rules", None
     if llm.configured():
         prompt = PLANNER_SYSTEM % (_tool_doc(), sqlguard.SCHEMA_DOC)
-        hint_txt = "\n".join(f"- '{h['span']}' matches {h['matches']} pages, most often {h['top_entity']} ({h['kind']})"
+        hint_txt = "\n".join(f"- '{h['span']}' matches {h['matches']} pages; best match {h['top_entity']} ({h['kind']})"
                              for h in hints) or "- none"
         text, provider = await llm.complete(prompt, f"Question: {question}\nKnown names in the question:\n{hint_txt}",
                                             as_json=True, max_tokens=500)
