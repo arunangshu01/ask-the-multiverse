@@ -18,19 +18,32 @@ class Store:
         self.data_dir = data_dir
         self._lock = threading.Lock()
         self._con: duckdb.DuckDBPyConnection | None = None
+        self._retired: tuple[duckdb.DuckDBPyConnection, Path] | None = None
         self.snapshot: dict = {}
 
     def load(self) -> None:
+        """Open the snapshot named by latest.json. On a swap the previous connection is kept open
+        until the next swap (so in-flight queries finish), then closed and its file deleted."""
         pointer = self.data_dir / "latest.json"
         if not pointer.exists():
             raise DataUnavailable(f"no snapshot in {self.data_dir}; run `python -m ingest realities`")
         snap = json.loads(pointer.read_text())
+        if self._con is not None and snap.get("db") == self.snapshot.get("db"):
+            return
         con = duckdb.connect(str(self.data_dir / snap["db"]), read_only=True)
         con.execute("SET enable_external_access = false")
         with self._lock:
-            old, self._con, self.snapshot = self._con, con, snap
+            old, self._con, old_snap, self.snapshot = self._con, con, self.snapshot, snap
+        if self._retired:
+            retired_con, retired_path = self._retired
+            retired_con.close()
+            if self.cleanup and retired_path.name != snap["db"]:
+                retired_path.unlink(missing_ok=True)
+            self._retired = None
         if old:
-            old.close()
+            self._retired = (old, self.data_dir / old_snap["db"])
+
+    cleanup = False  # delete retired snapshot files (only for downloaded copies, never local builds)
 
     def cursor(self) -> duckdb.DuckDBPyConnection:
         with self._lock:

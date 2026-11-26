@@ -4,6 +4,7 @@ import Graph from "../components/Graph";
 import Hero from "../components/Hero";
 import IndexGrid from "../components/IndexGrid";
 import PosterRows from "../components/PosterRows";
+import Timeline from "../components/Timeline";
 import { MEDIA, fmt } from "../lib/media";
 
 function StatsStrip({ stats, onMedium }) {
@@ -52,6 +53,7 @@ export default function Home({ stats, query, media, mediumFilter, setMediumFilte
         </div>
       </section>
       <PosterRows media={media} onOpen={onOpen} onSeeAll={pick} />
+      {hasGraph && <Timeline onAsk={ask} onReality={onOpen} />}
       <StatsStrip stats={stats} onMedium={pick} />
       <IndexGrid query={query} media={media} onOpen={onOpen} mediumFilter={mediumFilter}
         setMediumFilter={setMediumFilter} types={stats ? Object.keys(stats.by_type) : null} />

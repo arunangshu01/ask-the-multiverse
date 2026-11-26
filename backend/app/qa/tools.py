@@ -12,7 +12,8 @@ from dataclasses import dataclass, field
 from app.qa import resolve
 from app.store import Store
 
-NOT_PRESENT = "['mentioned','recap','image','vision','fictional','voice','corpse','impersonation','offpanel','narration']"
+NOT_PRESENT_FLAGS = ("mentioned", "recap", "image", "vision", "fictional", "voice", "corpse", "impersonation", "offpanel", "narration")
+NOT_PRESENT = "[" + ",".join(f"'{f}'" for f in NOT_PRESENT_FLAGS) + "]"
 WIKI = "https://marvel.fandom.com/wiki/"
 MEMBER_TYPES = "('member','former_member','leader','former_leader')"
 
@@ -696,6 +697,45 @@ WHERE r.dst = $e AND r.type IN ('event_protagonist','event_antagonist','event_ot
                   edges=[[r["id"], e["id"]] for r in rows[:25]], resolved={"event": e["id"]}, note=_alts_note(alts))
 
 
+ROLE_LABEL = {"featured": "Featured", "supporting": "Supporting", "antagonist": "Antagonists", "other": "Other characters"}
+
+
+def who_appears(store: Store, work: str, role: str | None = None) -> Result:
+    """Characters listed on a story page (comic issue, episode, film, game, novel) by role.
+    The work is matched by exact page title, or exact title without a '(film)'-style qualifier."""
+    w = work.strip().strip("'\"?").lower()
+    sql_w = """SELECT id, kind, year, medium, (SELECT count(*) FROM appearances a WHERE a.work = w.id) AS n FROM works w
+WHERE lower(id) = $w OR lower(regexp_replace(id, '\\s*\\([^)]*\\)$', '')) = $w ORDER BY lower(id) = $w DESC, n DESC LIMIT 3"""
+    found = store.rows(sql_w, {"w": w})
+    if not found and resolve.best(store, work, kinds=("team", "organization"))[0]:
+        return team_members(store, work)  # "who is in the X-Men" asks about a team, not a story
+    if not found:
+        return Result("who_appears", False, f"I couldn't find a story page titled \"{work}\" (comic issue, episode, film, "
+                      "game or novel), so I can't list who appears in it.", sql=show_sql(sql_w, {"w": w}), note="unresolved name")
+    wk = found[0]
+    role = {"villains": "antagonist", "villain": "antagonist", "antagonists": "antagonist", "heroes": "featured"}.get(
+        (role or "").lower(), role if role in ROLE_LABEL else None)
+    params = {"w": wk["id"], **({"r": role} if role else {})}
+    sql = f"""SELECT a.role, a.entity AS id, x.label, x.kind, x.reality, a.flags, a.story
+FROM appearances a JOIN entities x ON x.id = a.entity
+WHERE a.work = $w {"AND a.role = $r" if role else ""}
+ORDER BY CASE a.role WHEN 'featured' THEN 0 WHEN 'supporting' THEN 1 WHEN 'antagonist' THEN 2 ELSE 3 END, a.story, a.entity"""
+    rows = store.rows(sql, params)
+    head = f"**{wk['id']}**" + (f" ({wk['medium'].lower() if wk['medium'] else wk['kind']}, {wk['year']})" if wk["year"] else "")
+    if not rows:
+        return Result("who_appears", True, f"The page for {head} lists no {ROLE_LABEL.get(role, 'characters').lower()} "
+                      "that are in the index.", sql=show_sql(sql, params), citations=[_cite(f"Marvel Database: {wk['id']}", wk["id"])])
+    lines = [f"Characters listed on the wiki page for {head}:"]
+    for r_ in ("featured", "supporting", "antagonist", "other"):
+        names = list(dict.fromkeys(_name(r) + (" (mentioned/not present)" if set(r["flags"] or []) & set(NOT_PRESENT_FLAGS) else "")
+                                   for r in rows if r["role"] == r_))
+        if names:
+            lines.append(f"- {ROLE_LABEL[r_]}: " + ", ".join(names[:25]) + (f" and {len(names) - 25} more" if len(names) > 25 else ""))
+    return Result("who_appears", True, "\n".join(lines), rows=rows, sql=show_sql(sql, params),
+                  citations=[_cite(f"Marvel Database: {wk['id']}", wk["id"])],
+                  nodes=list(dict.fromkeys(r["id"] for r in rows))[:30], resolved={"work": wk["id"]})
+
+
 TOOLS = {
     "reality_info": (reality_info, ["reality"], "Facts about one reality, dimension or realm (e.g. Earth-616)."),
     "count_realities": (count_realities, ["medium?", "kind?"],
@@ -715,6 +755,9 @@ TOOLS = {
     "deaths": (deaths, ["name", "direction?"],
                "Deaths from the wiki's Killed By fields. direction=victim (default): who killed name and how; "
                "direction=killer: who name has killed."),
+    "who_appears": (who_appears, ["work", "role?"],
+                    "Characters listed in one story page (comic issue like 'Fantastic Four Vol 1 48', episode, film like "
+                    "'Avengers: Endgame', game, novel); role: featured|supporting|antagonist|other."),
     "origin": (origin, ["name"], "Who a character is and their origin: origin, birthplace, powers, origin story, debut."),
     "team_overlap": (team_overlap, ["team_a", "team_b"], "Characters who were members of both teams."),
     "team_members": (team_members, ["team", "status?"], "Members of a team; status: current|former|all."),

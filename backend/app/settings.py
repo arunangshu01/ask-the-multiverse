@@ -30,6 +30,12 @@ DATA_DIR = Path(os.environ.get("MULTIVERSE_DATA_DIR", BACKEND_DIR / "data" / "se
 
 MAX_PAGE = 200
 
+# Production: download the published snapshot from gs://<bucket>/<prefix>/ (see app/snapshot.py)
+# and re-check latest.json every SNAPSHOT_REFRESH_S seconds. Unset locally: DATA_DIR is used as is.
+SNAPSHOT_BUCKET = os.environ.get("MULTIVERSE_SNAPSHOT_BUCKET") or None
+SNAPSHOT_PREFIX = os.environ.get("MULTIVERSE_SNAPSHOT_PREFIX", "serve")
+SNAPSHOT_REFRESH_S = float(os.environ.get("MULTIVERSE_SNAPSHOT_REFRESH_S", "900"))
+
 # Multiverse Console (same providers as the portfolio's ask assistant). Without keys the
 # console still answers the supported question shapes with its rule-based planner.
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")

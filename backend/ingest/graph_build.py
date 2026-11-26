@@ -12,9 +12,11 @@ from pathlib import Path
 
 import duckdb
 
+from ingest import mcu
 from ingest.graph import Graph, write_jsonl
 
 log = logging.getLogger("ingest.graph_build")
+MAX_DROP = 0.02
 
 # Facts checked on every build (taken from the wiki pages themselves).
 GOLDEN = [
@@ -74,13 +76,19 @@ RELATION_KINDS = {
 }
 
 
+def _many(con, sql: str, rows: list) -> None:
+    if rows:
+        con.executemany(sql, rows)
+
+
 def _load(con, name, path, cols):
     spec = "{" + ", ".join(f"'{k}': '{v}'" for k, v in cols.items()) + "}"
     con.execute(f"CREATE TABLE {name} AS SELECT * FROM read_json('{path}', format='newline_delimited', "
                 f"columns={spec}, maximum_object_size=104857600)")
 
 
-def build_graph_db(g: Graph, data_dir: Path, run_id: str, realities_run: str, started: str) -> dict:
+def build_graph_db(g: Graph, data_dir: Path, run_id: str, realities_run: str, started: str,
+                   mcu_data: tuple[list, list, list] | None = None) -> dict:
     run_dir = data_dir / "runs" / run_id
     clean = run_dir / "clean"
     clean.mkdir(parents=True, exist_ok=True)
@@ -133,15 +141,41 @@ def build_graph_db(g: Graph, data_dir: Path, run_id: str, realities_run: str, st
             count(DISTINCT work) FILTER (WHERE NOT list_has_any(flags, ['mentioned','recap','image','vision',
                 'fictional','voice','corpse','impersonation','offpanel','narration'])) AS present
             FROM appearances GROUP BY 1""")
+        mcu_phases, mcu_entries, mcu_issues = mcu_data or ([], [], [])
+        mcu_issues = list(mcu_issues) + mcu.link_works(con, mcu_phases, mcu_entries)
+        con.execute("""CREATE TABLE mcu_phases ("order" INTEGER, phase VARCHAR, saga VARCHAR, start_year INTEGER,
+            end_year INTEGER, url VARCHAR, permalink VARCHAR)""")
+        _many(con, "INSERT INTO mcu_phases VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        [[p["order"], p["phase"], p["saga"], p["start_year"], p["end_year"], p["url"], p["permalink"]]
+                         for p in mcu_phases])
+        cols = ["phase", "position", "kind", "title", "mcu_page", "season", "mcu_url", "work", "work_kind", "year", "match"]
+        con.execute("""CREATE TABLE mcu_timeline (phase VARCHAR, position INTEGER, kind VARCHAR, title VARCHAR,
+            mcu_page VARCHAR, season INTEGER, mcu_url VARCHAR, work VARCHAR, work_kind VARCHAR, year INTEGER, match VARCHAR)""")
+        _many(con, f"INSERT INTO mcu_timeline VALUES ({', '.join('?' * len(cols))})", [[e[c] for c in cols] for e in mcu_entries])
+        _many(con, "INSERT INTO graph_issues VALUES (?, ?, ?, ?)", [[i.page, i.stage, i.reason, i.detail] for i in mcu_issues])
         unknown_app = con.execute("""SELECT count(*) FROM appearances a WHERE NOT EXISTS
             (SELECT 1 FROM entities e WHERE e.id = a.entity)""").fetchone()[0]
         counts = {t: con.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
                   for t in ("characters", "teams", "events", "works", "appearances", "relations", "variant_groups",
-                            "names", "realities", "places")}
+                            "names", "realities", "places", "mcu_timeline")}
         checks = []
         for label, sql in GOLDEN:
             n = con.execute(sql).fetchone()[0]
             checks.append({"check": label, "status": "pass" if n else "fail", "detail": f"{n} rows"})
+        # compared with the snapshot that is live now (the sync job downloads it to published.json)
+        live = serve / "published.json"
+        if live.exists():
+            before = json.loads(live.read_text()).get("counts", {})
+            for t in ("characters", "teams", "events", "works", "appearances", "relations"):
+                if before.get(t):
+                    ok = counts[t] >= before[t] * (1 - MAX_DROP)
+                    checks.append({"check": f"{t} row count did not drop more than {MAX_DROP:.0%}",
+                                   "status": "pass" if ok else "fail", "detail": f"{before[t]} -> {counts[t]}"})
+        if mcu_entries:
+            linked = sum(1 for e in mcu_entries if e["work"])
+            checks.append({"check": "MCU timeline titles linked to Marvel Database pages (90%+)",
+                           "status": "pass" if linked >= 0.9 * len(mcu_entries) else "warn",
+                           "detail": f"{linked} of {len(mcu_entries)}"})
         listed = g.meta["listed"]["characters"]
         checks.append({"check": "at least 95% of Category:Characters pages parsed",
                        "status": "pass" if counts["characters"] >= 0.95 * listed else "fail",

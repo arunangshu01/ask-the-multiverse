@@ -173,3 +173,24 @@ def test_entity_panel_and_neighbourhood(client):
     assert peter["origin"].startswith("Human") and peter["powers"] == ["Spider-Physiology"]
     stats = client.get(f"{P}/stats").json()
     assert stats["graph"]["characters"] == 14 and stats["graph"]["by_relation"]["member"] >= 1
+
+
+def test_mcu_timeline_links_exact_titles_and_reports_the_rest(client):
+    t = client.get(f"{P}/timeline/earth-199999").json()
+    one = t["phases"][0]
+    assert one["phase"] == "Phase One" and one["saga"] == "The Infinity Saga"
+    assert (one["start_year"], one["end_year"]) == (2008, 2012) and one["permalink"].endswith("?oldid=2618181")
+    by = {e["title"]: e for e in one["entries"]}
+    assert by["Iron Man"]["work"] == "Iron Man (film)" and by["Iron Man"]["year"] == 2008
+    assert by["Iron Man"]["match"] == "exact title"
+    assert by["The Avengers"]["work"] is None and by["The Consultant"]["kind"] == "one-shot"
+    assert (t["linked"], t["total"]) == (1, 3)
+
+
+def test_who_appears_lists_roles_and_falls_back_to_teams(store):
+    assert router.plan("Who appears in Fantastic Four Vol 1 48?") == ("who_appears", {"work": "Fantastic Four Vol 1 48"})
+    assert router.plan("Who are the villains in Thor Vol 1 160?") == ("who_appears", {"work": "Thor Vol 1 160", "role": "villains"})
+    r = tools.run(store, "who_appears", {"work": "Fantastic Four Vol 1 48", "role": "villains"})
+    assert {x["id"] for x in r.rows} == {"Galan (Earth-616)", "Norrin Radd (Earth-616)"} and "Antagonists" in r.answer
+    assert tools.run(store, "who_appears", {"work": "X-Men"}).tool == "team_members"
+    assert tools.run(store, "who_appears", {"work": "No Such Story"}).ok is False

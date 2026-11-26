@@ -17,14 +17,17 @@ LICENCE = {
     "sources": [
         {"name": "Marvel Database on Fandom", "url": "https://marvel.fandom.com/",
          "licence": "CC BY-SA 3.0", "licence_url": "https://marvel.fandom.com/wiki/Marvel_Database:Copyrights",
-         "used_for": "realities, dimensions, realms, first appearances, creators, descriptions"},
+         "used_for": "realities, dimensions, realms, characters, teams, events, story appearances, relationships, "
+                     "profiles, first appearances, creators, descriptions"},
+        {"name": "MCU Wiki on Fandom", "url": "https://marvelcinematicuniverse.fandom.com/",
+         "licence": "CC BY-SA", "licence_url": "https://www.fandom.com/licensing",
+         "used_for": "which films, series, specials and one-shots belong to each MCU phase (Earth-199999 timeline)"},
         {"name": "Wikidata", "url": "https://www.wikidata.org/", "licence": "CC0 1.0",
          "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
          "used_for": "cross-links to Marvel Database pages (P6262), animated-film flags via IMDb IDs (P345)"},
     ],
 }
 KNOWN_GAPS = [
-    "Characters, teams and relationships are not ingested yet (milestone 2).",
     "The medium comes from each reality's first-appearance page; a reality that later appears mostly in "
     "another medium keeps the medium of its debut unless a reviewed override says otherwise.",
     "Descriptions are taken from the first paragraph of the wiki's History or Overview field and may be shortened.",
@@ -38,6 +41,9 @@ GRAPH_GAPS = [
     "appearances are not counted.",
     "Character pages have no allies/enemies fields; listed allies and enemies come from team pages only.",
     "Variants come only from the wiki's disambiguation pages; characters without one show no variant list.",
+    "MCU phases come from the MCU Wiki phase pages; a title is linked to a Marvel Database page only by exact title "
+    "(or exact title without a '(film)'-style qualifier when that page has Earth-199999 characters). Unlinked titles "
+    "are listed here, not guessed.",
     "Relationship links that point to pages that are not characters, teams or events are counted and dropped "
     "(see 'Relations dropped').",
     "Wikidata links exist for only a few thousand Marvel Database pages.",
@@ -113,7 +119,7 @@ def coverage(request: Request, stage: str | None = None, reason: str | None = No
                  "appearances_of_non_entities": gm.get("appearances_of_non_entities")}
     return {"run": {k: report.get(k) for k in ("run_id", "started", "finished", "counts", "meta")},
             "graph": graph, "checks": report.get("checks", []), "summary": summary, "total": total, "items": items,
-            "overrides": overrides, "keyword_classified": low, "known_gaps": KNOWN_GAPS if not graph else KNOWN_GAPS[1:] + GRAPH_GAPS}
+            "overrides": overrides, "keyword_classified": low, "known_gaps": KNOWN_GAPS + (GRAPH_GAPS if graph else [])}
 
 
 @router.get("/credits")

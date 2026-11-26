@@ -197,6 +197,17 @@ def _kills(m):
     return "deaths", {"name": _strip(m.group(1)), "direction": "killer"}
 
 
+@rule(r"^(?:who\s+(?:appears?|appeared|is|was|are|were)\s+in|who\s+(?:is|was)\s+featured\s+in|(?:what\s+is\s+)?(?:the\s+)?cast\s+of|"
+      r"(?:list\s+)?(?:the\s+)?characters\s+in)\s+(.+?)" + _Q)
+def _cast(m):
+    return "who_appears", {"work": _strip(m.group(1))}
+
+
+@rule(r"^(?:who\s+(?:are|were|is|was)\s+)?(?:the\s+)?(villains?|antagonists?|heroes)\s+(?:in|of)\s+(.+?)" + _Q)
+def _cast_role(m):
+    return "who_appears", {"work": _strip(m.group(2)), "role": m.group(1).lower()}
+
+
 @rule(r"^(?:what\s+(?:is|was)\s+|tell\s+me\s+(?:about\s+)?|explain\s+)?(?:the\s+)?origin(?:\s+story)?\s+of\s+(.+?)" + _Q)
 def _origin(m):
     return "origin", {"name": _strip(m.group(1))}

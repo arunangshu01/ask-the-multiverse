@@ -55,6 +55,8 @@ def sample_graph() -> tuple[Graph, list]:
                 "url": f"https://marvel.fandom.com/wiki/{w.replace(' ', '_')}", "revid": 1}
                for w, y in (("Fantastic Four Vol 1 48", 1966), ("Infinity Gauntlet Vol 1 4", 1991),
                             ("Thor Vol 1 160", 1969), ("Silver Surfer Vol 3 50", 1991), ("Amazing Fantasy Vol 1 15", 1962))]
+    g.works.append({"id": "Iron Man (film)", "kind": "film", "medium": "Film", "format": "film", "series": None,
+                    "year": 2008, "url": "https://marvel.fandom.com/wiki/Iron_Man_(film)", "revid": 1})
     apps = [
         ("Fantastic Four Vol 1 48", 1, "Fantastic Four (Earth-616)", "featured", []),
         ("Fantastic Four Vol 1 48", 1, "Reed Richards (Earth-616)", "featured", []),
@@ -104,6 +106,21 @@ def sample_graph() -> tuple[Graph, list]:
     g.issues = [Issue("Some Page", "graph", "character page without Character Template", "None")]
     g.meta = {"listed": {"characters": len(g.characters)}}
     return g, apps
+
+
+PHASE_ONE = """{{Phase
+|films = ''[[Iron Man (film)|Iron Man]]''<br>''[[The Avengers]]''
+|one shots = ''[[Marvel One-Shot: The Consultant|The Consultant]]''
+|duration = 2008 - 2012
+|followed by = [[Phase Two]]}}
+'''Phase One''' is the first phase of the [[Marvel Cinematic Universe]] and the first phase of [[The Infinity Saga]]."""
+
+
+def sample_mcu():
+    """Phase One as written on the MCU Wiki: one title with a Marvel Database page, two without."""
+    from ingest import mcu
+    phase, entries = mcu.parse_phase("Phase One", PHASE_ONE, 2618181)
+    return [phase], entries, []
 
 
 def write_appearances(clean_dir, apps):

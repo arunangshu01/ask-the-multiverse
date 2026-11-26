@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from app.qa.tools import MEMBER_TYPES, NOT_PRESENT, pairs_sql
+import duckdb
+
+from app.qa.tools import MEMBER_TYPES, NOT_PRESENT, pairs_sql, url
 
 router = APIRouter()
 
@@ -115,6 +117,23 @@ def entity(request: Request, eid: str):
             WHERE r.dst = $id ORDER BY r.type, r.src""")
     out["sources"] = [{"label": f"Marvel Database: {eid}", "url": row.get("url"), "permalink": row.get("permalink")}]
     return out
+
+
+@router.get("/timeline/earth-199999")
+def mcu_timeline(request: Request):
+    """MCU phases and their titles from the MCU Wiki, each linked to its Marvel Database page when
+    the title matched exactly (unlinked titles are listed with work = null)."""
+    store = _store(request)
+    try:
+        phases = store.rows('SELECT * FROM mcu_phases ORDER BY "order"')
+        entries = store.rows("SELECT * FROM mcu_timeline ORDER BY phase, position")
+    except duckdb.CatalogException:
+        raise HTTPException(404, "This snapshot has no MCU timeline yet") from None
+    for p in phases:
+        p["entries"] = [{**e, "work_url": url(e["work"]) if e["work"] else None} for e in entries if e["phase"] == p["phase"]]
+    return {"phases": phases, "linked": sum(1 for e in entries if e["work"]), "total": len(entries),
+            "sources": [{"label": "MCU Wiki contributors on Fandom (CC BY-SA)", "url": "https://marvelcinematicuniverse.fandom.com"},
+                        {"label": "Marvel Database contributors on Fandom (CC BY-SA 3.0)", "url": "https://marvel.fandom.com"}]}
 
 
 @router.get("/graph/nodes")

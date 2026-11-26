@@ -43,6 +43,7 @@ export const api = {
   nodes: (ids, o) => get("/graph/nodes", { ids: ids.join("|") }, o),
   characters: (params, o) => get("/characters", params, o),
   askMeta: (o) => get("/ask/meta", {}, o),
+  timeline: (o) => get("/timeline/earth-199999", {}, o),
 };
 
 /** POST /ask and call onEvent for every server-sent event (steps, query, answer, citations, done). */

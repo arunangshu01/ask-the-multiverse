@@ -74,13 +74,13 @@ def _no_llm(monkeypatch):
 @pytest.fixture(scope="session")
 def data_dir(tmp_path_factory):
     from ingest import graph_build
-    from tests.graph_fixture import sample_graph, write_appearances
+    from tests.graph_fixture import sample_graph, sample_mcu, write_appearances
     d = tmp_path_factory.mktemp("data")
     report = build.build(sample_result(), d, "test", "2026-11-21T00:00:00+00:00")
     assert report["published"], report["checks"]
     g, apps = sample_graph()
     write_appearances(d / "runs" / "graph-test" / "clean", apps)
-    report = graph_build.build_graph_db(g, d, "graph-test", "test", "2026-11-21T00:00:00+00:00")
+    report = graph_build.build_graph_db(g, d, "graph-test", "test", "2026-11-21T00:00:00+00:00", sample_mcu())
     assert report["published"], report["checks"]
     return d / "serve"
 

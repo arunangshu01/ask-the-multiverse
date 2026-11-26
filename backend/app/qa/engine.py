@@ -35,7 +35,7 @@ refer to sources with [n] markers matching the numbered citation list. Plain ASC
 
 EDGE_KIND = {"fought_both": "enemy", "opponents": "enemy", "team_overlap": "team", "team_members": "team",
              "variants": "variant", "relatives": "family", "event_sides": "ally", "allies": "ally",
-             "first_fight": "enemy", "deaths": "enemy", "relationship": "enemy"}
+             "first_fight": "enemy", "deaths": "enemy", "relationship": "enemy", "who_appears": "team"}
 _cache: OrderedDict[str, tuple[float, list[dict]]] = OrderedDict()
 CACHE_TTL = 3600
 

@@ -73,6 +73,9 @@
  {"q": "Who has Wolverine fought in animation?", "tool": "opponents", "rows_include": ["Nathaniel Essex (Earth-92131)"]},
  {"q": "Who is Doctor Doom's arch-enemy?", "tool": "opponents", "rows_include": ["Reed Richards (Earth-616)"]},
  {"q": "Who are the enemies of the X-Men?", "tool": "opponents", "rows_include": ["Max Eisenhardt (Earth-616)"]},
+ {"q": "Who appears in Avengers: Endgame?", "tool": "who_appears", "rows_include": ["Anthony Stark (Earth-199999)", "Thanos (Earth-199999)"]},
+ {"q": "Who are the villains in Fantastic Four Vol 1 48?", "tool": "who_appears", "rows_include": ["Galan (Earth-616)", "Norrin Radd (Earth-616)"]},
+ {"q": "Who was in Iron Man (film)?", "tool": "who_appears", "rows_include": ["Obadiah Stane (Earth-199999)"]},
  {"q": "What's the box office of Avengers: Endgame in yen?", "tool": null, "unsupported": true},
  {"q": "Who would win in a fight, Hulk or Thor?", "tool": null, "unsupported": true},
  {"q": "What is Thanos's favourite colour?", "tool": null, "unsupported": true}

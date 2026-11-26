@@ -37,8 +37,14 @@ def main() -> None:
         if not args.realities_run:
             raise SystemExit("--realities-run is required (the run id of a published realities build)")
         from ingest import graph, graph_build
+        from ingest import mcu
         g = graph.build_graph(client, args.data_dir / "runs" / args.run_id / "clean")
-        report = graph_build.build_graph_db(g, args.data_dir, args.run_id, args.realities_run, started)
+        mcu_client = WikiClient(api_url=mcu.MCU_API, cache_dir=cache / "mcu", min_interval=args.interval)
+        try:
+            mcu_data = mcu.fetch(mcu_client)
+        finally:
+            mcu_client.close()
+        report = graph_build.build_graph_db(g, args.data_dir, args.run_id, args.realities_run, started, mcu_data)
         client.close()
         print(json.dumps({k: report[k] for k in ("run_id", "counts", "published")}, indent=1))
         for c in report["checks"]:

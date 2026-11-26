@@ -7,10 +7,11 @@ files written by `python -m ingest`), is derived from third-party sources and ke
 
 | Source | Licence | What we use |
 | --- | --- | --- |
-| [Marvel Database](https://marvel.fandom.com/) on Fandom, by its contributors | [CC BY-SA 3.0 Unported](https://creativecommons.org/licenses/by-sa/3.0/), as stated on the wiki's [copyright page](https://marvel.fandom.com/wiki/Marvel_Database:Copyrights) | reality, dimension and realm pages, the reality listings, first appearances, creators, descriptions |
+| [Marvel Database](https://marvel.fandom.com/) on Fandom, by its contributors | [CC BY-SA 3.0 Unported](https://creativecommons.org/licenses/by-sa/3.0/), as stated on the wiki's [copyright page](https://marvel.fandom.com/wiki/Marvel_Database:Copyrights) | reality, dimension and realm pages, the reality listings, character, team and event pages (profiles, relationships), story appearance lists, first appearances, creators, descriptions |
+| [MCU Wiki](https://marvelcinematicuniverse.fandom.com/) on Fandom, by its contributors | CC BY-SA, as reported by the wiki's API and [Fandom's licensing page](https://www.fandom.com/licensing) | which films, series, specials and one-shots belong to each MCU phase |
 | [Wikidata](https://www.wikidata.org/) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | cross-links to Marvel Database pages (P6262), animated-film flags via IMDb IDs (P345) |
 
-Because the Marvel Database text is CC BY-SA, **our derived data is also licensed under CC BY-SA 3.0**.
+Because the Marvel Database and MCU Wiki text is CC BY-SA, **our derived data is also licensed under CC BY-SA 3.0**.
 If you reuse it, credit "Marvel Database contributors on Fandom" with a link to the source page, and share
 your adaptation under the same licence.
 
