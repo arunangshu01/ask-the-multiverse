@@ -1,0 +1,101 @@
+name: Sync
+
+# Weekly full refresh from the Marvel Database and MCU Wiki APIs (about 7,000 polite calls at
+# 1 per second, roughly 2-3 hours). A snapshot is published only when every quality check
+# passes, including "no table shrank by more than 2%" against the snapshot that is live now.
+# The API picks the new snapshot up within 15 minutes; no redeploy is needed.
+on:
+  schedule:
+    - cron: '30 20 * * 6'  # Saturdays 20:30 UTC (Sunday 02:00 IST)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-data
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  KEEP_SNAPSHOTS: 4
+
+jobs:
+  sync:
+    name: Rebuild and publish the data snapshot
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Check sync variables
+        env:
+          GCP_SYNC_WIF_PROVIDER: ${{ vars.GCP_SYNC_WIF_PROVIDER }}
+          GCP_SYNC_SA: ${{ vars.GCP_SYNC_SA }}
+        working-directory: .
+        run: |
+          set -euo pipefail
+          for name in PROJECT_ID GCP_SYNC_WIF_PROVIDER GCP_SYNC_SA; do
+            test -n "${!name}" || { echo "::error::Missing Actions variable $name; see docs/deploy-gcp.md."; exit 1; }
+          done
+          case "$PROJECT_ID" in
+            ap-portfolio-241026|mahakal-ai-230925|doppel-101126|flowbench-*) echo '::error::Use a separate ask-the-multiverse project.'; exit 1 ;;
+          esac
+          test "$GCP_SYNC_SA" = "multiverse-sync@${PROJECT_ID}.iam.gserviceaccount.com"
+          echo "BUCKET=gs://${PROJECT_ID}-multiverse-data" >> "$GITHUB_ENV"
+          echo "STAMP=$(date -u +%Y%m%d)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_SYNC_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SYNC_SA }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Fetch the live pointer (for the row-count checks)
+        run: |
+          mkdir -p data/serve
+          if gcloud storage cp "$BUCKET/serve/latest.json" data/serve/published.json; then
+            cp data/serve/published.json data/serve/latest.json
+          else
+            echo "No snapshot published yet; this is the first sync."
+          fi
+      - name: Realities, dimensions and realms
+        run: python -m ingest realities --run-id "r$STAMP"
+      - name: Fetch the knowledge-graph pages
+        run: python -m ingest graph-fetch --run-id "g$STAMP"
+      - name: Build the knowledge graph and MCU timeline
+        run: python -m ingest graph --run-id "g$STAMP" --realities-run "r$STAMP"
+      - name: Publish (database first, pointer last)
+        run: |
+          set -euo pipefail
+          DB=$(python -c 'import json; print(json.load(open("data/serve/latest.json"))["db"])')
+          test "$DB" = "multiverse-g$STAMP.duckdb"
+          gcloud storage cp "data/serve/$DB" "$BUCKET/serve/$DB"
+          gcloud storage cp data/runs/"g$STAMP"/report.json "$BUCKET/reports/g$STAMP.json"
+          gcloud storage cp data/serve/latest.json "$BUCKET/serve/latest.json" --cache-control=no-store
+      - name: Remove old snapshots
+        run: |
+          set -euo pipefail
+          CURRENT=$(python -c 'import json; print(json.load(open("data/serve/latest.json"))["db"])')
+          gcloud storage ls "$BUCKET/serve/multiverse-*.duckdb" | sort -r | tail -n "+$((KEEP_SNAPSHOTS + 1))" | while read -r obj; do
+            case "$obj" in *"/$CURRENT") ;; *) gcloud storage rm "$obj" ;; esac
+          done
+      - name: Upload reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: sync-reports-${{ env.STAMP }}
+          path: backend/data/runs/*/report.json
+          if-no-files-found: ignore

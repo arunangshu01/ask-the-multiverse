@@ -1,0 +1,154 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: asia-south1
+  SERVICE: multiverse-api
+  API_PREFIX: /multiverse/api/v1
+  COMMIT: ${{ github.event.workflow_run.head_sha }}
+
+jobs:
+  deploy:
+    name: Deploy to Google Cloud
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://multiverse.arunangshupramanik.com
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check deployment variables
+        env:
+          GCP_WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          GCP_DEPLOY_SA: ${{ vars.GCP_DEPLOY_SA }}
+        run: |
+          set -euo pipefail
+          for name in PROJECT_ID GCP_WIF_PROVIDER GCP_DEPLOY_SA; do
+            test -n "${!name}" || { echo "::error::Missing Actions variable $name; see docs/deploy-gcp.md."; exit 1; }
+          done
+          case "$PROJECT_ID" in
+            ap-portfolio-241026|mahakal-ai-230925|doppel-101126|flowbench-*) echo '::error::Use a separate ask-the-multiverse project.'; exit 1 ;;
+          esac
+          test "$GCP_DEPLOY_SA" = "multiverse-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ env.COMMIT }}
+          persist-credentials: false
+      - name: Reject stale deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          HEAD_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+          test "$COMMIT" = "$HEAD_SHA" || { echo 'Refusing to deploy an outdated main commit.'; exit 1; }
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Verify backend
+        working-directory: backend
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pytest -q
+      - name: Verify and build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test -- --ci
+          npm run build
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools@15.34.0
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Check a data snapshot is published
+        run: |
+          gcloud storage ls "gs://${PROJECT_ID}-multiverse-data/serve/latest.json" > /dev/null || {
+            echo '::error::No snapshot in the data bucket yet. Run the Sync workflow once first (docs/deploy-gcp.md).'; exit 1; }
+      - name: Build and push API image
+        run: |
+          set -euo pipefail
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/multiverse/api:${COMMIT}"
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker build --platform linux/amd64 -t "$IMAGE" backend
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: Recheck main before deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          HEAD_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+          test "$COMMIT" = "$HEAD_SHA" || { echo 'Main changed during build; wait for the newer deployment.'; exit 1; }
+      # Scale to zero: the API is read-only over a DuckDB snapshot it downloads from GCS at
+      # start-up (~100 MB, kept in /tmp, which counts against memory). Max 1 instance keeps the
+      # in-process rate limits and answer cache consistent and bounds LLM spend.
+      - name: Deploy API
+        env:
+          LLM_SECRETS: ${{ vars.MULTIVERSE_LLM_SECRETS }}
+        run: |
+          set -euo pipefail
+          cp deploy/cloud-run.env.yaml "$RUNNER_TEMP/env.yaml"
+          echo "MULTIVERSE_SNAPSHOT_BUCKET: \"${PROJECT_ID}-multiverse-data\"" >> "$RUNNER_TEMP/env.yaml"
+          if [ -n "$LLM_SECRETS" ]; then SECRETS=(--set-secrets "$LLM_SECRETS"); else SECRETS=(--clear-secrets); fi
+          gcloud run deploy "$SERVICE" \
+            --project "$PROJECT_ID" \
+            --image "$IMAGE" \
+            --region "$REGION" \
+            --service-account "multiverse-run@${PROJECT_ID}.iam.gserviceaccount.com" \
+            --allow-unauthenticated \
+            --ingress all \
+            --port 8080 \
+            --cpu 1 \
+            --memory 1Gi \
+            --cpu-throttling \
+            --cpu-boost \
+            --concurrency 20 \
+            --min-instances 0 \
+            --max-instances 1 \
+            --timeout 60 \
+            --env-vars-file "$RUNNER_TEMP/env.yaml" \
+            "${SECRETS[@]}" \
+            --quiet
+      - name: Check API health
+        run: |
+          API_ORIGIN=$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)')
+          curl --fail --silent --show-error --retry 5 --retry-all-errors --max-time 60 "$API_ORIGIN$API_PREFIX/health" | python -c 'import json,sys; assert json.load(sys.stdin)=={"status":"ok"}'
+          python scripts/smoke.py "$API_ORIGIN" --api-only
+      - name: Deploy frontend
+        run: firebase deploy --only hosting --project "$PROJECT_ID" --non-interactive
+      - name: Smoke test Hosting, the API rewrite and a real answer
+        run: |
+          set -euo pipefail
+          SITE=$(node -p "require('./firebase.json').hosting.site")
+          python scripts/smoke.py "https://${SITE}.web.app"
+          curl --fail --silent --show-error "https://${SITE}.web.app$API_PREFIX/openapi.json" | python -c 'import json,sys,os; p=os.environ["API_PREFIX"]; s=json.load(sys.stdin); assert s["paths"] and all(k.startswith(p) for k in s["paths"])'
