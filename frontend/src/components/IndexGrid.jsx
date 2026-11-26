@@ -36,6 +36,10 @@ export default function IndexGrid({ query, media, onOpen, mediumFilter, setMediu
   const [loading, setLoading] = useState(null); // null | "reset" (filters changed) | "more"
   const reqId = useRef(0);
   const top = useRef(null);
+  const grid = useRef(null);
+  // skeletons fill two whole rows of whatever column count the screen has (1 on phones, up to 6 on wide screens)
+  const cols = () => Math.max(1, (typeof window !== "undefined" && grid.current
+    ? getComputedStyle(grid.current).gridTemplateColumns.split(" ").filter(Boolean).length : 2));
 
   const effectiveMedium = mediumFilter !== "all" ? mediumFilter : media ? media.join(",") : undefined;
   const params = { q: query.trim() || undefined, medium: effectiveMedium, kind, type, status, sort, limit: PAGE };
@@ -114,10 +118,10 @@ export default function IndexGrid({ query, media, onOpen, mediumFilter, setMediu
       {error && <div className="err" role="alert">Could not load the index: {error}</div>}
       {/* Pages load on request (not on scroll), so the footer below always stays reachable. While filters
           change, the previous cards stay in place (dimmed) and skeleton cards fill in, so the page never jumps. */}
-      <ul className={`grid${loading === "reset" && items.length ? " stale" : ""}`} aria-busy={Boolean(loading)}>
+      <ul ref={grid} className={`grid${loading === "reset" && items.length ? " stale" : ""}`} aria-busy={Boolean(loading)}>
         {items.map((r) => <Tile key={r.id} r={r} onOpen={onOpen} />)}
         {(loading === "more" || (loading === "reset" && !items.length)) &&
-          Array.from({ length: loading === "more" ? Math.min(10, (total || PAGE) - items.length) : 10 }, (_, i) => (
+          Array.from({ length: Math.min(Math.max(2, cols() * 2), loading === "more" ? (total || PAGE) - items.length : PAGE) }, (_, i) => (
             <li key={`sk${i}`} aria-hidden="true"><div className="tile skel"><i /><i /><i /></div></li>))}
       </ul>
       <div className="more-bar">

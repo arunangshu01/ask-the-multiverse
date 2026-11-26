@@ -77,6 +77,9 @@ button.stat { cursor: pointer; transition: border-color .25s; } button.stat:hove
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } }
 .more-bar { min-height: 76px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; padding: 18px 0 6px; color: var(--muted); font-size: 12.5px; }
 .more-bar .c { font-variant-numeric: tabular-nums; } .more-bar .btn:disabled { opacity: .6; cursor: progress; }
+@media (max-width: 600px) {
+  .more-bar { flex-direction: column; gap: 10px; } .more-bar .btn { width: 100%; max-width: 360px; text-align: center; }
+}
 .grid.stale { opacity: .45; transition: opacity .2s; pointer-events: none; }
 .tile.skel { cursor: default; min-height: 104px; animation: none; background: linear-gradient(100deg, rgba(255,255,255,.025) 30%, rgba(255,255,255,.07) 50%, rgba(255,255,255,.025) 70%) 0 0 / 300% 100%; animation: shimmer 1.3s linear infinite; }
 .tile.skel::before { background: rgba(255,255,255,.12); }
