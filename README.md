@@ -16,6 +16,7 @@ Fan-made project. Not affiliated with or endorsed by Marvel or Disney. All chara
 </p>
 
 <p align="center">
+  <a href="https://multiverse.arunangshupramanik.com"><img src="https://img.shields.io/website?url=https%3A%2F%2Fmultiverse.arunangshupramanik.com%2Fmultiverse%2Fapi%2Fv1%2Fhealth&label=live" alt="Live site status" /></a>
   <a href="https://github.com/arunangshu01/ask-the-multiverse/actions/workflows/ci.yml"><img src="https://github.com/arunangshu01/ask-the-multiverse/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="https://github.com/arunangshu01/ask-the-multiverse/actions/workflows/deploy.yml"><img src="https://github.com/arunangshu01/ask-the-multiverse/actions/workflows/deploy.yml/badge.svg" alt="Deploy" /></a>
   <a href="https://github.com/arunangshu01/ask-the-multiverse/actions/workflows/sync.yml"><img src="https://github.com/arunangshu01/ask-the-multiverse/actions/workflows/sync.yml/badge.svg" alt="Data sync" /></a>
@@ -30,7 +31,9 @@ Ask "Who has fought both Thanos and Galactus?" and an LLM turns the question int
 read-only DuckDB SELECT. The answer is built only from the returned rows, shows the query it ran, and links to the
 exact wiki pages (and revisions) it used. If the data can't answer, it says so.
 
-Also on: [ask-the-multiverse.web.app](https://ask-the-multiverse.web.app) (same site, Firebase default domain).
+Live at **[multiverse.arunangshupramanik.com](https://multiverse.arunangshupramanik.com)** (also served at
+[ask-the-multiverse.web.app](https://ask-the-multiverse.web.app), the Firebase default domain). The data refreshes
+weekly; the footer of every page shows when it was last synced.
 
 ## Try these
 
