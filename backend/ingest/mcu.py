@@ -1,8 +1,11 @@
 """MCU timeline (Earth-199999) from the MCU Wiki on Fandom (CC BY-SA, same API as the Marvel Database).
 
 Phase membership comes from the structured {{Phase}} infobox on each phase page ("Phase One" ...).
-Each title is then linked to the Marvel Database work it names, only by exact title (or exact
-title without a "(film)"-style qualifier when that work has Earth-199999 characters in it).
+Each title is then linked to the Marvel Database work it names, in this order of evidence:
+1. the Marvel Database film page's own "MCU" infobox field points to the same MCU Wiki page
+   (both sides resolved through MCU Wiki redirects);
+2. exact title;
+3. exact title without a "(film)"-style qualifier, when that work has Earth-199999 characters.
 Release years come from the Marvel Database work pages. Titles that can't be linked, and years
 outside the phase's own date range, are reported as issues instead of being guessed."""
 
@@ -72,6 +75,35 @@ def fetch(client: WikiClient) -> tuple[list[dict], list[dict], list[Issue]]:
     return phases, entries, issues
 
 
+def canonical(client: WikiClient, titles: set[str]) -> dict[str, str]:
+    """MCU Wiki title -> the page it resolves to after normalisation and redirects
+    ("Team Thor" -> "Marvel One-Shot: Team Thor: Part 1")."""
+    out, todo = {}, sorted(t for t in titles if t)
+    for i in range(0, len(todo), 50):
+        q = client.get(action="query", titles="|".join(todo[i:i + 50]), redirects=1).get("query", {})
+        hop = {r["from"]: r["to"] for r in q.get("normalized", []) + q.get("redirects", [])}
+        for t in todo[i:i + 50]:
+            seen, cur = set(), t
+            while cur in hop and cur not in seen:
+                seen.add(cur)
+                cur = hop[cur]
+            out[t] = cur
+    return out
+
+
+def attach_mcu_links(client: WikiClient, entries: list[dict], works: list[dict]) -> None:
+    """For each timeline entry, the Marvel Database works whose own "MCU" infobox field points to the
+    same MCU Wiki page (compared after resolving redirects on the MCU Wiki). This is an explicit
+    cross-wiki link written by the editors, so it is preferred over title matching."""
+    linked = {w["id"]: w["mcu"] for w in works if w.get("mcu") and w["kind"] in ("film", "short film")}
+    canon = canonical(client, set(linked.values()) | {e["mcu_page"] for e in entries})
+    by_page: dict[str, list[str]] = {}
+    for wid, page in linked.items():
+        by_page.setdefault(canon.get(page, page), []).append(wid)
+    for e in entries:
+        e["mcu_links"] = sorted(by_page.get(canon.get(e["mcu_page"], e["mcu_page"]), []))
+
+
 def link_works(con, phases: list[dict], entries: list[dict]) -> list[Issue]:
     """Fill work/year/match on each entry from the DuckDB works table. Never guesses: an entry stays
     unlinked unless exactly one candidate matches by the rules in the module docstring."""
@@ -95,7 +127,11 @@ def link_works(con, phases: list[dict], entries: list[dict]) -> list[Issue]:
                 [r for r in rows if r[2]], "title without qualifier, Earth-199999 episodes")
             if len(pick) == 1:
                 e.update(work=pick[0][0], work_kind="series", year=pick[0][1], match=how)
-        else:
+        elif len(e.get("mcu_links") or []) == 1:
+            row = con.execute("SELECT id, kind, year FROM works WHERE id = $id", {"id": e["mcu_links"][0]}).fetchone()
+            if row:
+                e.update(work=row[0], work_kind=row[1], year=row[2], match="Marvel Database page links to this MCU Wiki page")
+        if not e["work"] and e["kind"] != "series":
             rows = con.execute(f"""SELECT w.id, w.kind, w.year, {has_199999} AS mcu FROM works w
                 WHERE w.kind IN ('film', 'short film') AND (lower(w.id) IN (SELECT unnest($n))
                    OR lower(regexp_replace(w.id, '\\s*\\([^)]*\\)$', '')) IN (SELECT unnest($b)))""",
@@ -109,9 +145,16 @@ def link_works(con, phases: list[dict], entries: list[dict]) -> list[Issue]:
         if not e["work"]:
             issues.append(Issue(e["title"], "mcu", "MCU timeline title not linked to a Marvel Database page",
                                 f"{e['phase']}: {e['mcu_page']}"))
-        elif e["year"] and span.get(e["phase"], (None, None))[0]:
+            continue
+        if e["year"] and span.get(e["phase"], (None, None))[0]:
             lo, hi = span[e["phase"]]
             if not lo <= e["year"] <= hi:
                 issues.append(Issue(e["title"], "mcu", "release year outside the phase's date range on the MCU Wiki",
                                     f"{e['work']} ({e['year']}) vs {e['phase']} {lo}-{hi}"))
+        others = con.execute("""SELECT list(DISTINCT x.reality ORDER BY x.reality) FROM works w
+            JOIN appearances a ON a.work = w.id JOIN entities x ON x.id = a.entity
+            WHERE (w.id = $w OR w.series = $w) AND x.kind = 'character'""", {"w": e["work"]}).fetchone()[0] or []
+        if others and "Earth-199999" not in others:
+            issues.append(Issue(e["title"], "mcu", "linked Marvel Database page files its characters under another reality",
+                                f"{e['work']}: {', '.join(others[:3])}"))
     return issues

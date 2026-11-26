@@ -440,7 +440,9 @@ def build_graph(client: WikiClient, out_dir: Path) -> Graph:
                 series = media.EPISODE_TITLE.match(wid).group(1) if kind == "episode" and media.EPISODE_TITLE.match(wid) else None
                 g.works.append({"id": wid, "kind": kind, "medium": WORK_MEDIUM.get(kind), "series": series, "format": kind,
                                 "year": _year(f, "Year", "Release Date", "US Release Date", "Published"),
-                                "url": page_url(wid), "revid": revid})
+                                "url": page_url(wid), "revid": revid,
+                                # the page's own link to the MCU Wiki ({{Film Template}} "MCU" field)
+                                "mcu": wt.plain(f.get("MCU", "")) or None})
                 for k, v in f.items():
                     m = APPEARANCE_FIELD.match(k)
                     if not m:

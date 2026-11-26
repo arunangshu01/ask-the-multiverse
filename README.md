@@ -12,7 +12,7 @@ from the returned rows and links to the exact wiki pages used. An evaluation set
 answer accuracy.
 
 - ETL: Marvel Database MediaWiki API + Wikidata SPARQL -> raw response cache -> Parquet -> DuckDB.
-- Graph: 106k characters (with origin, birthplace, powers, deaths), 12k teams/organisations, 387 events, 78k works, 985k story appearances, 168k sourced relationships (incl. 11k "killed by"), 8k variant groups, 5.5k realities/dimensions/realms, and the MCU timeline (6 phases, 71 titles).
+- Graph: 106k characters (with origin, birthplace, powers, deaths), 12k teams/organisations, 387 events, 78k works, 985k story appearances, 168k sourced relationships (incl. 11k "killed by"), 8k variant groups, 5.5k realities/dimensions/realms, and the MCU timeline (6 phases, all 71 titles linked).
 - Console questions: origins and powers, who fought whom (and when first), allies, how two characters are connected, deaths, variants, teams and overlaps, family, creators, who appears in a story, reality facts and counts.
 - UI: cinematic opening sequence, featured realities, Multiverse Console with live steps + generated query + sources, connections star-map with search across every reality, MCU timeline, poster rows, full index, coverage and credits pages.
 - Hosting: Firebase Hosting + Cloud Run (scale to zero) + a GCS data bucket, deployed by GitHub Actions with keyless Workload Identity Federation; a weekly sync rebuilds the data and publishes it only if every quality check passes. See `docs/deploy-gcp.md`.

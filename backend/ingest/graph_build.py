@@ -55,6 +55,7 @@ TABLES = {
                "first_work": "VARCHAR", "last_appearance": "VARCHAR", "description": "VARCHAR", "revid": "BIGINT",
                "url": "VARCHAR", "permalink": "VARCHAR"},
     "works": {"id": "VARCHAR", "kind": "VARCHAR", "medium": "VARCHAR", "format": "VARCHAR", "series": "VARCHAR",
+              "mcu": "VARCHAR",
               "year": "INTEGER", "url": "VARCHAR", "revid": "BIGINT"},
     "relations_raw": {"src": "VARCHAR", "dst": "VARCHAR", "type": "VARCHAR", "note": "VARCHAR",
                       "evidence": "VARCHAR", "field": "VARCHAR"},

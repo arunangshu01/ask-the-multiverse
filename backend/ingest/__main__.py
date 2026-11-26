@@ -42,6 +42,7 @@ def main() -> None:
         mcu_client = WikiClient(api_url=mcu.MCU_API, cache_dir=cache / "mcu", min_interval=args.interval)
         try:
             mcu_data = mcu.fetch(mcu_client)
+            mcu.attach_mcu_links(mcu_client, mcu_data[1], g.works)
         finally:
             mcu_client.close()
         report = graph_build.build_graph_db(g, args.data_dir, args.run_id, args.realities_run, started, mcu_data)

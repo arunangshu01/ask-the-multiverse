@@ -56,7 +56,11 @@ def sample_graph() -> tuple[Graph, list]:
                for w, y in (("Fantastic Four Vol 1 48", 1966), ("Infinity Gauntlet Vol 1 4", 1991),
                             ("Thor Vol 1 160", 1969), ("Silver Surfer Vol 3 50", 1991), ("Amazing Fantasy Vol 1 15", 1962))]
     g.works.append({"id": "Iron Man (film)", "kind": "film", "medium": "Film", "format": "film", "series": None,
-                    "year": 2008, "url": "https://marvel.fandom.com/wiki/Iron_Man_(film)", "revid": 1})
+                    "year": 2008, "url": "https://marvel.fandom.com/wiki/Iron_Man_(film)", "revid": 1, "mcu": "Iron Man"})
+    # titled differently from the MCU Wiki; its infobox "MCU" field names the MCU Wiki page
+    g.works.append({"id": "Marvel's The Avengers", "kind": "film", "medium": "Film", "format": "film", "series": None,
+                    "year": 2012, "url": "https://marvel.fandom.com/wiki/Marvel%27s_The_Avengers", "revid": 1,
+                    "mcu": "The Avengers"})
     apps = [
         ("Fantastic Four Vol 1 48", 1, "Fantastic Four (Earth-616)", "featured", []),
         ("Fantastic Four Vol 1 48", 1, "Reed Richards (Earth-616)", "featured", []),
@@ -117,9 +121,11 @@ PHASE_ONE = """{{Phase
 
 
 def sample_mcu():
-    """Phase One as written on the MCU Wiki: one title with a Marvel Database page, two without."""
+    """Phase One as written on the MCU Wiki: two titles with a Marvel Database page, one without."""
     from ingest import mcu
     phase, entries = mcu.parse_phase("Phase One", PHASE_ONE, 2618181)
+    for e in entries:  # what attach_mcu_links finds from the works' "MCU" fields
+        e["mcu_links"] = {"Iron Man (film)": ["Iron Man (film)"], "The Avengers": ["Marvel's The Avengers"]}.get(e["mcu_page"], [])
     return [phase], entries, []
 
 

@@ -182,9 +182,10 @@ def test_mcu_timeline_links_exact_titles_and_reports_the_rest(client):
     assert (one["start_year"], one["end_year"]) == (2008, 2012) and one["permalink"].endswith("?oldid=2618181")
     by = {e["title"]: e for e in one["entries"]}
     assert by["Iron Man"]["work"] == "Iron Man (film)" and by["Iron Man"]["year"] == 2008
-    assert by["Iron Man"]["match"] == "exact title"
-    assert by["The Avengers"]["work"] is None and by["The Consultant"]["kind"] == "one-shot"
-    assert (t["linked"], t["total"]) == (1, 3)
+    assert by["Iron Man"]["match"] == "Marvel Database page links to this MCU Wiki page"
+    assert by["The Avengers"]["work"] == "Marvel's The Avengers" and by["The Avengers"]["year"] == 2012
+    assert by["The Consultant"]["work"] is None and by["The Consultant"]["kind"] == "one-shot"
+    assert (t["linked"], t["total"]) == (2, 3)
 
 
 def test_who_appears_lists_roles_and_falls_back_to_teams(store):

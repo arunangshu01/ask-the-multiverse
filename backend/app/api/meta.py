@@ -41,9 +41,9 @@ GRAPH_GAPS = [
     "appearances are not counted.",
     "Character pages have no allies/enemies fields; listed allies and enemies come from team pages only.",
     "Variants come only from the wiki's disambiguation pages; characters without one show no variant list.",
-    "MCU phases come from the MCU Wiki phase pages; a title is linked to a Marvel Database page only by exact title "
-    "(or exact title without a '(film)'-style qualifier when that page has Earth-199999 characters). Unlinked titles "
-    "are listed here, not guessed.",
+    "MCU phases come from the MCU Wiki phase pages. A title is linked to a Marvel Database page when that page's own "
+    "'MCU' field points to the same MCU Wiki page, else by exact title (or exact title without a '(film)'-style "
+    "qualifier when that page has Earth-199999 characters). Unlinked titles are listed here, not guessed.",
     "Relationship links that point to pages that are not characters, teams or events are counted and dropped "
     "(see 'Relations dropped').",
     "Wikidata links exist for only a few thousand Marvel Database pages.",
