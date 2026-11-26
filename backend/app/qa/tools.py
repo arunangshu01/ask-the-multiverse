@@ -39,6 +39,9 @@ class Result:
 def show_sql(sql: str, params: dict) -> str:
     """The SQL with parameters inlined, for display only (execution stays parameterised)."""
     def lit(v):
+        if isinstance(v, list):
+            more = f" /* +{len(v) - 10} more */" if len(v) > 10 else ""
+            return "[" + ", ".join(lit(x) for x in v[:10]) + more + "]"
         return "'" + str(v).replace("'", "''") + "'" if isinstance(v, str) else str(v)
     out = re.sub(r"\$(\w+)", lambda m: lit(params[m.group(1)]) if m.group(1) in params else m.group(0), sql)
     return re.sub(r"\n\s+", "\n  ", out.strip())
@@ -237,7 +240,7 @@ FROM {table} x LEFT JOIN works w ON w.id = x.first_work WHERE x.id = $id"""
 HERO = "('featured','supporting')"
 
 
-def pairs_sql(param: str, same_side: bool = False, medium: str | None = None) -> str:
+def pairs_sql(param: str, same_side: bool = False, medium: str | None = None, many: bool = False) -> str:
     """Story pairs for ${param}: opposite sides (one antagonist, the other featured/supporting), or the
     same hero side (both featured/supporting). Mentions, images, visions and similar never count."""
     sides = (f"s.role IN {HERO} AND x.role IN {HERO}" if same_side else
@@ -245,7 +248,7 @@ def pairs_sql(param: str, same_side: bool = False, medium: str | None = None) ->
     med = f"\n      AND s.work IN (SELECT id FROM works WHERE medium = ${medium})" if medium else ""
     return f"""SELECT x.entity, x.work, x.story FROM appearances s
     JOIN appearances x ON x.work = s.work AND x.story = s.story AND x.entity <> s.entity
-    WHERE s.entity = ${param}
+    WHERE {f"s.entity IN (SELECT unnest(${param})) AND x.entity NOT IN (SELECT unnest(${param}))" if many else f"s.entity = ${param}"}
       AND NOT list_has_any(s.flags, {NOT_PRESENT}) AND NOT list_has_any(x.flags, {NOT_PRESENT})
       AND {sides}{med}"""
 
@@ -293,17 +296,13 @@ GROUP BY ALL ORDER BY least(stories_vs_a, stories_vs_b) DESC, e.id LIMIT 15"""
 MEDIA = ("Comics", "Film", "Television", "Animation", "Games", "Prose")
 
 
-def _variant_in_medium(store: Store, e: dict, medium: str) -> tuple[dict, str | None]:
-    """The variant (same disambiguation page) that appears most in `medium`, used when e itself has no
-    opponents there. Returns (entity, original name if switched)."""
-    if e["kind"] != "character":
-        return e, None
-    alt = store.one(f"""SELECT x.id, x.kind, x.label, x.reality, count(DISTINCT a.work) AS n
+def _variants_in_medium(store: Store, e: dict, medium: str) -> list[dict]:
+    """Every variant on e's disambiguation page with present appearances in `medium`, most first."""
+    return store.rows(f"""SELECT c.id, x.label, x.reality, count(DISTINCT a.work) AS n
         FROM characters c JOIN entities x ON x.id = c.id JOIN appearances a ON a.entity = c.id JOIN works w ON w.id = a.work
-        WHERE c.variant_group = (SELECT variant_group FROM characters WHERE id = $id) AND c.id <> $id
+        WHERE c.variant_group = (SELECT variant_group FROM characters WHERE id = $id)
           AND w.medium = $m AND NOT list_has_any(a.flags, {NOT_PRESENT})
-        GROUP BY ALL ORDER BY n DESC, x.id LIMIT 1""", {"id": e["id"], "m": medium})
-    return (alt, _name(e)) if alt else (e, None)
+        GROUP BY ALL ORDER BY n DESC, c.id""", {"id": e["id"], "m": medium})
 
 
 def _medium(medium: str | None) -> str | None:
@@ -320,35 +319,69 @@ def opponents(store: Store, name: str, medium: str | None = None) -> Result:
     if not e:
         return _missing("opponents", "a character or team", name)
     medium = _medium(medium)
-    switched = None
-    sql = f"""WITH opp AS ({pairs_sql('a', medium='m' if medium else None)})
+    # With a medium and no reality named ("Spider-Man in video games"), count every variant of the character
+    # that appears in that medium: the wiki files each game, film or series under its own reality.
+    # A named reality is kept unless it has no opponents in the medium (LLM plans often add "(Earth-616)").
+    variants = _variants_in_medium(store, e, medium) if medium and e["kind"] == "character" else []
+    named = bool(resolve.REALITY_ID.search(name))
+    pooled = variants if len(variants) > 1 and not named else []
+
+    def opp_sql(pool: bool) -> str:
+        if not pool:
+            return f"""WITH opp AS ({pairs_sql('a', medium='m' if medium else None)})
 SELECT x.id, x.label, x.kind, count(DISTINCT o.work) AS stories, min(o.work) AS sample
 FROM opp o JOIN entities x ON x.id = o.entity WHERE x.kind = 'character'
 GROUP BY ALL ORDER BY stories DESC, x.id LIMIT 15"""
-    params = {"a": e["id"], **({"m": medium} if medium else {})}
-    rows = store.rows(sql, params)
-    if medium and not rows:
-        alt, switched = _variant_in_medium(store, e, medium)
-        if switched:
-            e, params = alt, {**params, "a": alt["id"]}
-            rows = store.rows(sql, params)
+        # group opponents by their own disambiguation page too ("Doctor Octopus" across realities)
+        return f"""WITH opp AS ({pairs_sql('a', medium='m', many=True)}),
+g AS (SELECT o.entity, o.work, coalesce(c.variant_group, o.entity) AS grp FROM opp o
+      JOIN entities x ON x.id = o.entity AND x.kind = 'character' LEFT JOIN characters c ON c.id = o.entity),
+per AS (SELECT entity, count(DISTINCT work) AS n FROM g GROUP BY 1),
+top AS (SELECT g.grp, count(DISTINCT g.work) AS stories, count(DISTINCT g.entity) AS variants,
+        arg_max(g.entity, p.n) AS id, min(g.work) AS sample FROM g JOIN per p ON p.entity = g.entity GROUP BY 1)
+SELECT t.id, x.label, x.kind, x.reality, t.stories, t.variants, t.grp AS variant_group, t.sample
+FROM top t JOIN entities x ON x.id = t.id ORDER BY t.stories DESC, t.grp LIMIT 15"""
+
+    def run_opp(pool: list) -> tuple[str, dict, list]:
+        q = opp_sql(bool(pool))
+        prm = {"a": [v["id"] for v in pool] if pool else e["id"], **({"m": medium} if medium else {})}
+        return q, prm, store.rows(q, prm)
+
+    sql, params, rows = run_opp(pooled)
+    widened = False
+    if named and not rows and len(variants) > 1:
+        pooled, widened = variants, True
+        sql, params, rows = run_opp(pooled)
     team_enemies = [] if medium else store.rows(
         "SELECT dst AS id FROM relations WHERE src = $a AND type = 'enemy' ORDER BY dst LIMIT 20", {"a": e["id"]})
     where = f" in {medium.lower()} stories" if medium else ""
+    group = store.scalar("SELECT variant_group FROM characters WHERE id = $id", {"id": e["id"]}) if pooled else None
+    who = (f"**{e['label']}** across every variant on the wiki's {group} page ({len(pooled)} with {medium.lower()} "
+           f"appearances)" if pooled else f"**{_name(e)}**")
     if not rows and not team_enemies:
-        return Result("opponents", True, f"The story appearance data has no opponents recorded for {_name(e)}{where}.",
-                      sql=show_sql(sql, params), citations=[_cite(f"Marvel Database: {e['id']}", e["id"])],
-                      nodes=[e["id"]], resolved={"entity": e["id"]})
-    lines = ([f"{switched} has no opponents in {medium.lower()} stories, so this uses its variant from the same "
-              f"disambiguation page with the most {medium.lower()} appearances."] if switched else []) + \
-        [f"Most frequent opponents of **{_name(e)}**{where} in the story appearance data:"]
-    lines += [f"- **{_name(r)}** - {r['stories']} {'story' if r['stories'] == 1 else 'stories'}" for r in rows[:12]]
+        return Result("opponents", True, f"The story appearance data has no opponents recorded for "
+                      f"{who.replace('**', '')}{where}.", sql=show_sql(sql, params),
+                      citations=[_cite(f"Marvel Database: {e['id']}", e["id"])], nodes=[e["id"]], resolved={"entity": e["id"]})
+    lines = ([f"{_name(e)} has no opponents in {medium.lower()} stories, so this counts its variants instead."]
+             if widened else []) + [f"Most frequent opponents of {who}{where} in the story appearance data:"]
+    # pooled rows name the opponent by its most frequent variant (variant page titles can be odd, e.g. "Cap-Wolf")
+    lines += [f"- **{_name(r)}** - {r['stories']} {'story' if r['stories'] == 1 else 'stories'}"
+              + (f" (counting its variants in {r['variants']} realities)" if pooled and r.get("variants", 1) > 1 else "")
+              for r in rows[:12]]
+    if pooled:
+        lines.append("Variants counted, by " + medium.lower() + " appearances: " +
+                     ", ".join(f"{v['label']} ({v['reality']}) {v['n']}" for v in pooled[:6]) +
+                     (f" and {len(pooled) - 6} more" if len(pooled) > 6 else "") +
+                     f". Name a reality (e.g. \"{e['id']}\") to see one variant only.")
     if team_enemies:
         lines.append(f"The team page lists these enemies: {', '.join(t['id'] for t in team_enemies[:12])}.")
-    cites = [_cite(f"Marvel Database: {e['id']}", e["id"])] + [_cite(f"Marvel Database: {r['sample']}", r["sample"]) for r in rows[:6]]
-    return Result("opponents", True, "\n".join(lines), rows=rows, sql=show_sql(sql, params), citations=cites,
-                  nodes=[e["id"]] + [r["id"] for r in rows[:12]], edges=[[e["id"], r["id"]] for r in rows[:12]],
-                  resolved={"entity": e["id"]}, note=_alts_note(alts))
+    centre = [v["id"] for v in pooled[:3]] if pooled else [e["id"]]
+    cites = ([_cite(f"Marvel Database: {group} (disambiguation)", group)] if pooled else []) + \
+        [_cite(f"Marvel Database: {c}", c) for c in centre] + [_cite(f"Marvel Database: {r['sample']}", r["sample"]) for r in rows[:6]]
+    return Result("opponents", True, "\n".join(lines), rows=rows + [{"variant": v["id"], "stories": v["n"]} for v in pooled],
+                  sql=show_sql(sql, params), citations=cites, nodes=centre + [r["id"] for r in rows[:12]],
+                  edges=[[centre[0], r["id"]] for r in rows[:12]], resolved={"entity": e["id"], "variants": centre},
+                  note=None if pooled else _alts_note(alts))
 
 
 def allies(store: Store, name: str) -> Result:

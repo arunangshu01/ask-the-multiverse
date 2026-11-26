@@ -206,3 +206,15 @@ def test_tool_run_maps_a_single_misnamed_argument(store):
     assert r.resolved == {"team": "Avengers (Earth-616)"}
     with pytest.raises(ValueError):
         tools.run(store, "fought_both", {"x": "Thanos", "y": "Galactus"})
+
+
+def test_opponents_in_a_medium_pool_every_variant_unless_a_reality_is_named(store):
+    r = tools.run(store, "opponents", {"name": "Spider-Man", "medium": "Film"})
+    assert r.rows[0]["id"] == "Loki Laufeyson (Earth-616)" and r.rows[0]["stories"] == 1
+    assert {x["variant"] for x in r.rows if "variant" in x} == {"Peter Parker (Earth-199999)", "Peter Parker (Earth-1048)"}
+    assert "across every variant on the wiki's Peter Parker page (2 with film appearances)" in r.answer
+    one = tools.run(store, "opponents", {"name": "Peter Parker (Earth-199999)", "medium": "Film"})
+    assert one.rows == [{"id": "Loki Laufeyson (Earth-616)", "label": "Loki", "kind": "character", "stories": 1,
+                         "sample": "Iron Man (film)"}]  # a named reality that appears in the medium is kept
+    absent = tools.run(store, "opponents", {"name": "Peter Parker (Earth-616)", "medium": "Film"})
+    assert absent.answer.startswith("Spider-Man (Peter Parker, Earth-616) has no opponents in film stories, so this counts")
