@@ -88,7 +88,9 @@ export default function Graph({ center, highlight, onOpen }) {
           n.vx += (w / 2 - n.x) * 0.003; n.vy += (h / 2 - n.y) * 0.004;
           if (n === s.drag) { n.vx = n.vy = 0; continue; }
           n.vx *= 0.8; n.vy *= 0.8; n.x += n.vx; n.y += n.vy;
-          n.x = Math.max(40, Math.min(w - 40, n.x)); n.y = Math.max(50, Math.min(h - 40, n.y));
+          // keep labels clear of the edges and of the legend (wider margins on narrow screens)
+          const mx = w < 520 ? 64 : 40, mb = w < 520 ? 64 : 40;
+          n.x = Math.max(mx, Math.min(w - mx, n.x)); n.y = Math.max(w < 520 ? 104 : 56, Math.min(h - mb, n.y));
         }
         s.alpha = Math.max(0, s.alpha * (reduced() ? 0.9 : 0.985));
         setTick((t) => t + 1);
@@ -189,7 +191,7 @@ export default function Graph({ center, highlight, onOpen }) {
                   <circle className="glow" r={r * 2.2} fill={c} filter="url(#glowf)" />
                   <circle className="core" r={r} fill={c} />
                   <circle r={r * 0.45} fill="#fff" fillOpacity=".85" />
-                  <text y={r + 14}>{shortLabel(n).slice(0, 22)}{n.reality && n.reality !== "Earth-616" ? ` - ${n.reality.replace("Earth-", "")}` : ""}</text>
+                  <text y={r + 14}>{shortLabel(n).slice(0, size().w < 520 ? 14 : 22)}{n.reality && n.reality !== "Earth-616" ? ` - ${n.reality.replace("Earth-", "")}` : ""}</text>
                 </g>
               );
             })}

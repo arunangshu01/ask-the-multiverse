@@ -57,7 +57,8 @@ button.stat { cursor: pointer; transition: border-color .25s; } button.stat:hove
 
 /* index */
 .ixbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
-.ixbar select { background: #141419; color: #ddd; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font: 12px var(--body); }
+.ixbar label { max-width: 100%; min-width: 0; } .ixbar .ixsearch { width: 240px; }
+.ixbar select { max-width: 100%; background: #141419; color: #ddd; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font: 12px var(--body); }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip { font-size: 12px; color: #ccc; border: 1px solid var(--line); background: rgba(255,255,255,.03); padding: 6px 12px; border-radius: 20px; cursor: pointer; transition: all .2s; white-space: nowrap; }
 .chip:hover { color: #fff; border-color: var(--accent); }
@@ -192,7 +193,7 @@ a.pill:hover, button.pill:hover { border-color: var(--accent); color: #fff; }
 body.lock { overflow: hidden; }
 
 /* ===================== HERO ===================== */
-.hero { position: relative; display: flex; align-items: flex-end; min-height: max(560px, 72vh); margin-top: -72px; padding: 132px var(--pad) 64px; overflow: hidden; }
+.hero { position: relative; display: flex; align-items: flex-end; min-height: max(560px, 72vh); min-height: max(560px, 72svh); margin-top: -72px; padding: 132px var(--pad) 64px; overflow: hidden; }
 .slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s ease; }
 .slide.on { opacity: 1; }
 .slide .art { position: absolute; inset: -6%; animation: kenburns 14s ease-in-out infinite alternate; }
@@ -346,3 +347,54 @@ a.cite:hover { border-color: var(--accent); color: #fff; }
 .tl-l { font-size: 12px; color: var(--muted); } .tl-l a { color: #cfcfd6; } .tl-un { color: #8a8a96; font-style: italic; }
 .tl-ask { background: none; border: 0; padding: 0; color: #cfcfd6; text-decoration: underline; cursor: pointer; font: inherit; }
 @media (max-width: 600px) { .tl-list { grid-template-columns: 1fr; } .tl-tab { min-width: 92px; padding: 8px 12px; } }
+
+/* ===================== ALL DEVICES ===================== */
+/* notches and home indicators (viewport-fit=cover is set in index.html) */
+.topbar { padding-left: max(var(--pad), env(safe-area-inset-left)); padding-right: max(var(--pad), env(safe-area-inset-right)); }
+section, .hero { padding-left: max(var(--pad), env(safe-area-inset-left)); padding-right: max(var(--pad), env(safe-area-inset-right)); }
+.foot { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+.drawer .bd { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+.skip { bottom: calc(9vh + 18px + env(safe-area-inset-bottom)); }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+.drawer { height: 100%; height: 100dvh; }
+.drawer .bd { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+/* phones and short landscape screens: the top bar scrolls away instead of covering content */
+@media (max-width: 600px), (max-height: 500px) {
+  .topbar { position: relative; backdrop-filter: none; background: rgba(7,7,10,.97); }
+}
+/* landscape phones: panels fit the screen height */
+@media (max-height: 500px) {
+  .split .glass { height: calc(100vh - 24px); height: calc(100dvh - 24px); min-height: 320px; }
+  .hero { min-height: 0; padding-top: 40px; padding-bottom: 48px; }
+  .hero h1 { font-size: clamp(30px, 6vw, 56px); }
+  .drawer .ban { height: 120px; }
+}
+@media (max-width: 600px) {
+  .ixbar .ixsearch, .ixbar label { flex: 1 1 100%; width: 100%; } .ixbar select { width: 100%; }
+  .node text { font-size: 9.5px; letter-spacing: .06em; }
+  .ucap { gap: 6px; } .ucap label:first-of-type { flex: 1 1 auto; } .ucap input { width: 100%; min-width: 0; }
+  .legend { gap: 8px; font-size: 10px; left: 10px; right: 10px; }
+  .glass .hd { padding: 12px 14px; } .glass .hd .r { font-size: 10px; }
+  .sh h1, .sh h2 { font-size: 19px; }
+  .drawer .bd { padding-left: 18px; padding-right: 18px; }
+}
+/* touch screens: tap targets at least ~40px tall */
+@media (pointer: coarse) {
+  .div, .navlink, .ghostbtn { min-height: 40px; display: inline-flex; align-items: center; }
+  .chip { min-height: 36px; display: inline-flex; align-items: center; }
+  .pill { padding: 7px 12px; } .cite { padding: 7px 11px; }
+  .search { min-height: 42px; } .ucap input, .ixbar select { min-height: 38px; font-size: 16px; }
+  .ask input, .search input { font-size: 16px; } /* 16px stops iOS zooming into inputs */
+  .gsug button { padding: 10px 8px; } .tl-tab { min-height: 52px; }
+  .dots button { height: 14px; background: transparent; } .dots button::before { content: ""; position: absolute; left: 0; right: 0; top: 5px; height: 3px; background: rgba(255,255,255,.25); }
+  .dots button.on::after { top: 5px; bottom: auto; height: 3px; }
+  .drawer .x { width: 44px; height: 44px; }
+  .logo { padding: 9px 12px 7px; } .ucap select { min-height: 38px; font-size: 14px !important; }
+  button.tag { min-height: 34px; padding: 4px 10px; }
+  .tile:hover, .poster:hover { transform: none; }
+}
+/* very wide screens: keep content at a readable width */
+@media (min-width: 1700px) {
+  :root { --pad: max(44px, calc((100vw - 1640px) / 2)); }
+}

@@ -96,7 +96,7 @@ export default function Coverage({ stats }) {
                   {cov.summary.filter((s) => !filter.stage || s.stage === filter.stage).map((s) => (
                     <option key={`${s.stage}${s.reason}`} value={s.reason}>{s.reason} ({fmt(s.n)})</option>))}
                 </select></label>
-              <label className="search" style={{ width: 240 }}><span className="sr-only">Search pages</span>
+              <label className="search ixsearch"><span className="sr-only">Search pages</span>
                 <input type="search" placeholder="Search pages..." value={filter.q} onChange={set("q")} /></label>
             </div>
             <div className="scroll-x">
