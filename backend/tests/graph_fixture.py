@@ -75,6 +75,10 @@ def sample_graph() -> tuple[Graph, list]:
         ("Silver Surfer Vol 3 50", 1, "Norrin Radd (Earth-616)", "featured", []),
         ("Silver Surfer Vol 3 50", 1, "Galan (Earth-616)", "antagonist", ["mentioned"]),
         ("Amazing Fantasy Vol 1 15", 1, "Peter Parker (Earth-616)", "featured", ["first"]),
+        # two Peter Parker variants in one film, for opponents pooled across variants in a medium
+        ("Iron Man (film)", 1, "Peter Parker (Earth-199999)", "featured", []),
+        ("Iron Man (film)", 1, "Peter Parker (Earth-1048)", "supporting", []),
+        ("Iron Man (film)", 1, "Loki Laufeyson (Earth-616)", "antagonist", []),
     ]
     rel = lambda s, d, t, f="CurrentMembers": {"src": s, "dst": d, "type": t, "note": None, "evidence": d, "field": f}  # noqa: E731
     g.relations = [
