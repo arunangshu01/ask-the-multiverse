@@ -33,16 +33,16 @@ export default function IndexGrid({ query, media, onOpen, mediumFilter, setMediu
   const [total, setTotal] = useState(null);
   const [facets, setFacets] = useState({});
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const sentinel = useRef(null);
+  const [loading, setLoading] = useState(null); // null | "reset" (filters changed) | "more"
   const reqId = useRef(0);
+  const top = useRef(null);
 
   const effectiveMedium = mediumFilter !== "all" ? mediumFilter : media ? media.join(",") : undefined;
   const params = { q: query.trim() || undefined, medium: effectiveMedium, kind, type, status, sort, limit: PAGE };
 
   const load = useCallback(async (offset) => {
     const id = ++reqId.current;
-    setLoading(true);
+    setLoading(offset === 0 ? "reset" : "more");
     try {
       const body = await api.realities({ ...params, offset });
       if (id !== reqId.current) return;
@@ -53,7 +53,7 @@ export default function IndexGrid({ query, media, onOpen, mediumFilter, setMediu
     } catch (e) {
       if (id === reqId.current) setError(e.message);
     } finally {
-      if (id === reqId.current) setLoading(false);
+      if (id === reqId.current) setLoading(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(params)]);
@@ -63,21 +63,11 @@ export default function IndexGrid({ query, media, onOpen, mediumFilter, setMediu
     return () => clearTimeout(t);
   }, [load, query]);
 
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!el || typeof IntersectionObserver === "undefined") return undefined;
-    const io = new IntersectionObserver((es) => {
-      if (es[0].isIntersecting && !loading && total !== null && items.length < total) load(items.length);
-    }, { rootMargin: "600px" });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [items.length, total, loading, load]);
-
   const visibleMedia = Object.keys(MEDIA).filter((k) => facets[k] && (!media || media.includes(k)));
   const allCount = visibleMedia.reduce((a, k) => a + facets[k], 0);
 
   return (
-    <section id="index" aria-labelledby="index-h">
+    <section id="index" aria-labelledby="index-h" ref={top}>
       <div className="sh">
         <h2 id="index-h">The Complete Multiverse</h2>
         <span className="c" aria-live="polite">
@@ -122,14 +112,23 @@ export default function IndexGrid({ query, media, onOpen, mediumFilter, setMediu
         </label>
       </div>
       {error && <div className="err" role="alert">Could not load the index: {error}</div>}
-      <ul className="grid">
+      {/* Pages load on request (not on scroll), so the footer below always stays reachable. While filters
+          change, the previous cards stay in place (dimmed) and skeleton cards fill in, so the page never jumps. */}
+      <ul className={`grid${loading === "reset" && items.length ? " stale" : ""}`} aria-busy={Boolean(loading)}>
         {items.map((r) => <Tile key={r.id} r={r} onOpen={onOpen} />)}
+        {(loading === "more" || (loading === "reset" && !items.length)) &&
+          Array.from({ length: loading === "more" ? Math.min(10, (total || PAGE) - items.length) : 10 }, (_, i) => (
+            <li key={`sk${i}`} aria-hidden="true"><div className="tile skel"><i /><i /><i /></div></li>))}
       </ul>
-      <div className="sentinel" ref={sentinel}>
-        {total === null ? "" : items.length < total
-          ? <button type="button" className="chip" onClick={() => load(items.length)} disabled={loading}>
-            {loading ? "Loading..." : `Load more (${fmt(items.length)} of ${fmt(total)})`}</button>
-          : total ? `All ${fmt(total)} shown` : "Nothing matches these filters."}
+      <div className="more-bar">
+        {total === null ? null : items.length < total ? (
+          <>
+            <span className="c">Showing {fmt(items.length)} of {fmt(total)}</span>
+            <button type="button" className="btn ghost" onClick={() => load(items.length)} disabled={Boolean(loading)}>
+              {loading === "more" ? "Loading..." : `Load ${fmt(Math.min(PAGE, total - items.length))} more`}</button>
+            {items.length > PAGE && <button type="button" className="chip" onClick={() => top.current?.scrollIntoView({ behavior: "smooth" })}>Back to top</button>}
+          </>
+        ) : total ? <span className="c">All {fmt(total)} shown</span> : <span className="c">Nothing matches these filters.</span>}
       </div>
     </section>
   );
