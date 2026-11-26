@@ -28,6 +28,15 @@ def test_prefix_is_consistent_everywhere():
     assert FIREBASE["rewrites"][-1] == {"source": "**", "destination": "/index.html"}  # SPA fallback last
 
 
+def test_only_the_portfolio_may_embed_the_site():
+    headers = {h["key"]: h["value"] for rule in FIREBASE["headers"] if rule["source"] == "**" for h in rule["headers"]}
+    assert "X-Frame-Options" not in headers  # can't allow-list another origin; frame-ancestors replaces it
+    ancestors = headers["Content-Security-Policy"].removeprefix("frame-ancestors ").split()
+    assert ancestors == ["'self'", "https://arunangshupramanik.com", "https://www.arunangshupramanik.com",
+                         "https://arunangshu-pramanik-portfolio.web.app",
+                         "https://arunangshu-pramanik-portfolio.firebaseapp.com"]
+
+
 def test_hosting_service_and_account_names():
     assert FIREBASE["site"] == "ask-the-multiverse" and re.fullmatch(r"[a-z0-9][a-z0-9-]+", FIREBASE["site"])
     assert "url: https://multiverse.arunangshupramanik.com" in DEPLOY
